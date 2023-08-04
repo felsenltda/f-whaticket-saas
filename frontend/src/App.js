@@ -39,7 +39,7 @@ const App = () => {
       },
       textColorMenu: {
         primary: { main: "#FFFFFF" },
-        secondary: { main: "#446ffc" }
+        secondary: { main: "#FFFFFF" }
       
       },    },
     locale
