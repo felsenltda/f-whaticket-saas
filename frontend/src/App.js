@@ -21,8 +21,8 @@ const App = () => {
         },
       },
       palette: {
-        primary: { main: "#446ffc" },
-        third: { main: "#d17308" }
+        primary: { main: "#110142" },
+        third: { main: "#E75A4D" }
       },
 
       barraSuperior: {
@@ -31,7 +31,7 @@ const App = () => {
       },
 
       barraLateral: {
-        primary: { main: "#e3e5e8" },
+        primary: { main: "#110142" },
       },
 
       icons: {
