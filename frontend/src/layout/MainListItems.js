@@ -379,12 +379,12 @@ const MainListItems = (props) => {
               primary={i18n.t("mainDrawer.listItems.settings")}
               icon={<SettingsOutlinedIcon />}
             />
-{             <ListItemLink
+{/*             <ListItemLink
               to="/subscription"
               primary="Assinatura"
               icon={<PaymentIcon />}
-              className={classes.menuItem}
-            />}
+              //className={classes.menuItem}
+            /> */}
           </>
         )}
       />
