@@ -18,8 +18,7 @@ import {
 
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
-import AccountCircle from "@material-ui/icons/AccountCircle";
-
+import AccountCircleIcon from "@material-ui/icons/AccountCircle";
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
 import UserModal from "../components/UserModal";
@@ -28,7 +27,6 @@ import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
-
 import logo from "../assets/logo.png";
 import { socketConnection } from "../services/socket";
 import ChatPopover from "../pages/Chat/ChatPopover";
@@ -43,10 +41,8 @@ const useStyles = makeStyles((theme) => ({
       height: "calc(100vh - 56px)",
     },
   },
-
   toolbar: {
     paddingRight: 24,
-    color: "#FFFFFF",
     background: "#333333", // Cor de fundo da barra lateral
   },
   toolbarIcon: {
@@ -80,7 +76,6 @@ const useStyles = makeStyles((theme) => ({
   title: {
     flexGrow: 1,
     fontSize: 14,
-    color: "#FFFFFF", // Cor do texto
   },
   drawerPaper: {
     backgroundColor: "#333333", // Cor de fundo da barra lateral
@@ -109,7 +104,6 @@ const useStyles = makeStyles((theme) => ({
   content: {
     flex: 1,
     overflow: "auto",
-    ...theme.scrollbarStyles,
   },
   container: {
     paddingTop: theme.spacing(4),
@@ -125,7 +119,6 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(1),
     overflowY: "scroll",
-    ...theme.scrollbarStyles,
   },
   logoImage: {
     maxWidth: "150px",
@@ -151,7 +144,7 @@ const LoggedInLayout = ({ children }) => {
   const { user } = useContext(AuthContext);
 
   const theme = useTheme();
-  const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
+  const greaterThanSm = useMediaQuery(theme.breakpoints.up("sm"));
 
   useEffect(() => {
     if (document.body.offsetWidth > 600) {
@@ -228,7 +221,10 @@ const LoggedInLayout = ({ children }) => {
     <div className={classes.root}>
       <Drawer
         variant={drawerVariant}
-        className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}
+        className={clsx(
+          classes.drawerPaper,
+          !drawerOpen && classes.drawerPaperClose
+        )}
         classes={{
           paper: clsx(
             classes.drawerPaper,
@@ -282,7 +278,7 @@ const LoggedInLayout = ({ children }) => {
             noWrap
             className={classes.title}
           >
-            {greaterThenSm ? (
+            {greaterThanSm ? (
               <>
                 Olá <b>{user.name}</b>, Seja bem-vindo.
               </>
@@ -301,7 +297,7 @@ const LoggedInLayout = ({ children }) => {
               onClick={handleMenu}
               variant="contained"
             >
-              <AccountCircle className={classes.iconColor} />
+              <AccountCircleIcon className={classes.iconColor} />
             </IconButton>
             <Menu
               id="menu-appbar"
