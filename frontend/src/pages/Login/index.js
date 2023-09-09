@@ -6,8 +6,7 @@ import Typography from "@material-ui/core/Typography";
 import { makeStyles, createTheme, ThemeProvider } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import logo from "../../assets/logo.png"; // Seu logo
-import background from "../../assets/fundo.jpg"; // Sua imagem de fundo
+import logo from "../../assets/logo.png";
 
 const theme = createTheme({
   palette: {
@@ -19,23 +18,17 @@ const theme = createTheme({
 });
 
 const useStyles = makeStyles((theme) => ({
-  root: {
-    height: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    background: `url(${background}) no-repeat center`,
-    backgroundSize: "cover",
-  },
   paper: {
-    width: "40%", // Largura da caixa de login
+    marginTop: theme.spacing(8),
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
     padding: theme.spacing(4), // Aumentando o espaçamento interno
     borderRadius: "8px",
     boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-    backgroundColor: "rgba(0, 0, 0, 0.7)", // Fundo da caixa de login
   },
   logo: {
-    maxWidth: "100%", // Ajuste automático da largura do logo
+    maxWidth: "150px", // Limite de tamanho para o logo
     marginBottom: "20px", // Espaçamento entre o logo e o texto
   },
   avatar: {
@@ -55,7 +48,6 @@ const useStyles = makeStyles((theme) => ({
   copyright: {
     marginTop: "20px", // Espaçamento entre o texto de login e o copyright
     textAlign: "center",
-    color: "#fff",
   },
 }));
 
@@ -80,11 +72,13 @@ const Login = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <div className={classes.root}>
-        <Container component="main" maxWidth="xs" className={classes.paper}>
-          <div>
-            <img className={classes.logo} src={logo} alt="Logo" />
-          </div>
+      <Container component="main" maxWidth="xs">
+        <div className={classes.paper}>
+          <img
+            className={classes.logo}
+            src={logo}
+            alt="Whats"
+          />
           <Typography component="h1" variant="h5" className={classes.loginText}>
             Faça login
           </Typography>
@@ -125,11 +119,11 @@ const Login = () => {
               Entrar
             </Button>
           </form>
-          <Typography variant="body2" className={classes.copyright}>
+          <Typography variant="body2" color="textSecondary" className={classes.copyright}>
             &copy; {currentYear} Felsen Gestão e Tecnologia - Todos os direitos reservados
           </Typography>
-        </Container>
-      </div>
+        </div>
+      </Container>
     </ThemeProvider>
   );
 };
