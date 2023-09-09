@@ -21,6 +21,7 @@ const App = () => {
         },
       },
       palette: {
+        type: 'dark', // Altera o tipo de paleta para dark
         primary: { main: "#110142" },
         third: { main: "#E75A4D" }
       },
@@ -40,8 +41,8 @@ const App = () => {
       textColorMenu: {
         primary: { main: "#FFFFFF" },
         secondary: { main: "#FFFFFF" }
-      
-      },    },
+      },
+    },
     locale
   );
 
