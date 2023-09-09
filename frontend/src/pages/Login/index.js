@@ -23,6 +23,7 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		flexDirection: "column",
 		alignItems: "center",
+		backgroundColor:"black",
 	},
 	avatar: {
 		margin: theme.spacing(1),
@@ -54,7 +55,7 @@ const Login = () => {
 	};
 
 	return (
-		<Container component="main" maxWidth="xs" style={{ backgroundColor: "#332424" }}>
+		<Container component="main" maxWidth="xs">
 			<CssBaseline />
 			<div className={classes.paper}>
 				<div>
