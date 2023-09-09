@@ -1,6 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
 import clsx from "clsx";
-
 import {
   makeStyles,
   Drawer,
@@ -9,13 +8,12 @@ import {
   List,
   Typography,
   Divider,
-  MenuItem,
   IconButton,
   Menu,
   useTheme,
   useMediaQuery,
+  ThemeProvider,
 } from "@material-ui/core";
-
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
 import AccountCircleIcon from "@material-ui/icons/AccountCircle";
@@ -43,7 +41,6 @@ const useStyles = makeStyles((theme) => ({
   },
   toolbar: {
     paddingRight: 24,
-    background: "#333333", // Cor de fundo da barra lateral
   },
   toolbarIcon: {
     display: "flex",
@@ -78,7 +75,6 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 14,
   },
   drawerPaper: {
-    backgroundColor: "#333333", // Cor de fundo da barra lateral
     position: "relative",
     whiteSpace: "nowrap",
     width: drawerWidth,
@@ -129,7 +125,7 @@ const useStyles = makeStyles((theme) => ({
   },
   // Adicione a classe para a cor dos ícones
   iconColor: {
-    color: "#FFFFFF",
+    color: theme.palette.common.white,
   },
 }));
 
@@ -218,117 +214,119 @@ const LoggedInLayout = ({ children }) => {
   }
 
   return (
-    <div className={classes.root}>
-      <Drawer
-        variant={drawerVariant}
-        className={clsx(
-          classes.drawerPaper,
-          !drawerOpen && classes.drawerPaperClose
-        )}
-        classes={{
-          paper: clsx(
+    <ThemeProvider theme={theme}>
+      <div className={classes.root}>
+        <Drawer
+          variant={drawerVariant}
+          className={clsx(
             classes.drawerPaper,
             !drawerOpen && classes.drawerPaperClose
-          ),
-        }}
-        open={drawerOpen}
-      >
-        <div className={classes.toolbarIcon}>
-          <img
-            src={logo}
-            className={clsx(classes.logoImage, classes.iconColor)}
-            alt="logo"
-          />
-          <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
-            <ChevronLeftIcon className={classes.iconColor} />
-          </IconButton>
-        </div>
-        <Divider />
-        <List className={classes.containerWithScroll}>
-          <MainListItems drawerClose={drawerClose} />
-        </List>
-        <Divider />
-      </Drawer>
-      <UserModal
-        open={userModalOpen}
-        onClose={() => setUserModalOpen(false)}
-        userId={user?.id}
-      />
-      <AppBar
-        position="absolute"
-        className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
-        color="primary"
-      >
-        <Toolbar variant="dense" className={classes.toolbar}>
-          <IconButton
-            edge="start"
-            variant="contained"
-            aria-label="open drawer"
-            onClick={() => setDrawerOpen(!drawerOpen)}
-            className={clsx(
-              classes.menuButton,
-              drawerOpen && classes.menuButtonHidden
-            )}
-          >
-            <MenuIcon className={classes.iconColor} />
-          </IconButton>
-          <Typography
-            component="h8"
-            variant="h8"
-            noWrap
-            className={classes.title}
-          >
-            {greaterThanSm ? (
-              <>
-                Olá <b>{user.name}</b>, Seja bem-vindo.
-              </>
-            ) : (
-              user.name
-            )}
-          </Typography>
-          {user.id && <NotificationsPopOver />}
-          <AnnouncementsPopover />
-          <ChatPopover />
-          <div>
-            <IconButton
-              aria-label="account of current user"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
-              onClick={handleMenu}
-              variant="contained"
-            >
-              <AccountCircleIcon className={classes.iconColor} />
+          )}
+          classes={{
+            paper: clsx(
+              classes.drawerPaper,
+              !drawerOpen && classes.drawerPaperClose
+            ),
+          }}
+          open={drawerOpen}
+        >
+          <div className={classes.toolbarIcon}>
+            <img
+              src={logo}
+              className={clsx(classes.logoImage, classes.iconColor)}
+              alt="logo"
+            />
+            <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
+              <ChevronLeftIcon className={classes.iconColor} />
             </IconButton>
-            <Menu
-              id="menu-appbar"
-              anchorEl={anchorEl}
-              getContentAnchorEl={null}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "right",
-              }}
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              open={menuOpen}
-              onClose={handleCloseMenu}
-            >
-              <MenuItem onClick={handleOpenUserModal}>
-                {i18n.t("mainDrawer.appBar.user.profile")}
-              </MenuItem>
-              <MenuItem onClick={handleClickLogout}>
-                {i18n.t("mainDrawer.appBar.user.logout")}
-              </MenuItem>
-            </Menu>
           </div>
-        </Toolbar>
-      </AppBar>
-      <main className={classes.content}>
-        <div className={classes.appBarSpacer} />
-        {children ? children : null}
-      </main>
-    </div>
+          <Divider />
+          <List className={classes.containerWithScroll}>
+            <MainListItems drawerClose={drawerClose} />
+          </List>
+          <Divider />
+        </Drawer>
+        <UserModal
+          open={userModalOpen}
+          onClose={() => setUserModalOpen(false)}
+          userId={user?.id}
+        />
+        <AppBar
+          position="absolute"
+          className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
+          color="primary"
+        >
+          <Toolbar variant="dense" className={classes.toolbar}>
+            <IconButton
+              edge="start"
+              variant="contained"
+              aria-label="open drawer"
+              onClick={() => setDrawerOpen(!drawerOpen)}
+              className={clsx(
+                classes.menuButton,
+                drawerOpen && classes.menuButtonHidden
+              )}
+            >
+              <MenuIcon className={classes.iconColor} />
+            </IconButton>
+            <Typography
+              component="h8"
+              variant="h8"
+              noWrap
+              className={classes.title}
+            >
+              {greaterThanSm ? (
+                <>
+                  Olá <b>{user.name}</b>, Seja bem-vindo.
+                </>
+              ) : (
+                user.name
+              )}
+            </Typography>
+            {user.id && <NotificationsPopOver />}
+            <AnnouncementsPopover />
+            <ChatPopover />
+            <div>
+              <IconButton
+                aria-label="account of current user"
+                aria-controls="menu-appbar"
+                aria-haspopup="true"
+                onClick={handleMenu}
+                variant="contained"
+              >
+                <AccountCircleIcon className={classes.iconColor} />
+              </IconButton>
+              <Menu
+                id="menu-appbar"
+                anchorEl={anchorEl}
+                getContentAnchorEl={null}
+                anchorOrigin={{
+                  vertical: "bottom",
+                  horizontal: "right",
+                }}
+                transformOrigin={{
+                  vertical: "top",
+                  horizontal: "right",
+                }}
+                open={menuOpen}
+                onClose={handleCloseMenu}
+              >
+                <MenuItem onClick={handleOpenUserModal}>
+                  {i18n.t("mainDrawer.appBar.user.profile")}
+                </MenuItem>
+                <MenuItem onClick={handleClickLogout}>
+                  {i18n.t("mainDrawer.appBar.user.logout")}
+                </MenuItem>
+              </Menu>
+            </div>
+          </Toolbar>
+        </AppBar>
+        <main className={classes.content}>
+          <div className={classes.appBarSpacer} />
+          {children ? children : null}
+        </main>
+      </div>
+    </ThemeProvider>
   );
 };
 
