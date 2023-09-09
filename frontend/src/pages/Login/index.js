@@ -27,6 +27,10 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: "8px",
     boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
   },
+  logo: {
+    maxWidth: "150px", // Limite de tamanho para o logo
+    marginBottom: "20px", // Espaçamento entre o logo e o texto
+  },
   avatar: {
     margin: theme.spacing(1),
     backgroundColor: theme.palette.primary.main,
@@ -37,6 +41,13 @@ const useStyles = makeStyles((theme) => ({
   },
   submit: {
     margin: theme.spacing(3, 0, 2),
+  },
+  loginText: {
+    fontSize: "18px", // Redução do tamanho do texto "Faça login"
+  },
+  copyright: {
+    marginTop: "20px", // Espaçamento entre o texto de login e o copyright
+    textAlign: "center",
   },
 }));
 
@@ -56,20 +67,20 @@ const Login = () => {
     handleLogin(user);
   };
 
+  const currentYear = new Date().getFullYear(); // Obtém o ano corrente
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Container component="main" maxWidth="xs">
         <div className={classes.paper}>
-          <div>
-            <img
-              style={{ margin: "0 auto", height: "80px", width: "100%" }}
-              src={logo}
-              alt="Whats"
-            />
-          </div>
-          <Typography component="h1" variant="h5">
-            Faça o login
+          <img
+            className={classes.logo}
+            src={logo}
+            alt="Whats"
+          />
+          <Typography component="h1" variant="h5" className={classes.loginText}>
+            Faça login
           </Typography>
           <form className={classes.form} noValidate onSubmit={handleSubmit}>
             <TextField
@@ -108,6 +119,9 @@ const Login = () => {
               Entrar
             </Button>
           </form>
+          <Typography variant="body2" color="textSecondary" className={classes.copyright}>
+            &copy; {currentYear} Felsen Gestão e Tecnologia - Todos os direitos reservados
+          </Typography>
         </div>
       </Container>
     </ThemeProvider>
