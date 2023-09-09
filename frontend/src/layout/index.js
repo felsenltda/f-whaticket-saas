@@ -45,9 +45,9 @@ const useStyles = makeStyles((theme) => ({
   },
 
   toolbar: {
-    paddingRight: 24, // keep right padding when drawer closed
-    color: "#FFFFFF",
-    background: "#333333",
+    paddingRight: 24,
+    background: theme.palette.background.paper, // Usar a cor de fundo do tema escuro
+    color: theme.palette.primary.contrastText, // Usar a cor de texto do tema escuro
   },
   toolbarIcon: {
     display: "flex",
@@ -82,7 +82,7 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 14,
   },
   drawerPaper: {
-    backgroundColor: theme.barraLateral.primary.main,
+    backgroundColor: theme.palette.background.default, // Usar a cor de fundo do tema escuro
     position: "relative",
     whiteSpace: "nowrap",
     width: drawerWidth,
@@ -126,13 +126,12 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
-  // Adicione a classe para a imagem do logo
   logoImage: {
-    maxWidth: "150px",  // Limita a largura da imagem a 150px
-    margin: "10px",     // Adiciona margens de 10px em todas as direções
+    maxWidth: "150px",
+    margin: "10px auto",
     display: "flex",
-    justifyContent: "center", // Centraliza verticalmente
-    alignItems: "center",     // Centraliza horizontalmente
+    justifyContent: "center",
+    alignItems: "center",
   },
 }));
 
@@ -235,7 +234,6 @@ const LoggedInLayout = ({ children }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          {/* Aplica a classe personalizada à imagem */}
           <img src={logo} className={classes.logoImage} alt="logo" />
           <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
             <ChevronLeftIcon />
@@ -255,7 +253,6 @@ const LoggedInLayout = ({ children }) => {
       <AppBar
         position="absolute"
         className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
-        color="primary"
       >
         <Toolbar variant="dense" className={classes.toolbar}>
           <IconButton
@@ -273,7 +270,6 @@ const LoggedInLayout = ({ children }) => {
           <Typography
             component="h8"
             variant="h8"
-            color="#FFFFFF"
             noWrap
             className={classes.title}
           >
@@ -298,7 +294,6 @@ const LoggedInLayout = ({ children }) => {
               aria-haspopup="true"
               onClick={handleMenu}
               variant="contained"
-
             >
               <AccountCircle />
             </IconButton>
