@@ -1,6 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
 import clsx from "clsx";
-
 import {
   makeStyles,
   Drawer,
@@ -15,11 +14,9 @@ import {
   useTheme,
   useMediaQuery,
 } from "@material-ui/core";
-
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
 import AccountCircle from "@material-ui/icons/AccountCircle";
-
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
 import UserModal from "../components/UserModal";
@@ -28,7 +25,6 @@ import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
-
 import logo from "../assets/logo.png";
 import { socketConnection } from "../services/socket";
 import ChatPopover from "../pages/Chat/ChatPopover";
@@ -43,11 +39,10 @@ const useStyles = makeStyles((theme) => ({
       height: "calc(100vh - 56px)",
     },
   },
-
   toolbar: {
-    paddingRight: 24, // keep right padding when drawer closed
-    color: "#FFFFFF",
-    background: theme.barraSuperior.primary.main,
+    paddingRight: 24,
+    color: theme.palette.common.white,
+    background: theme.palette.primary.main,
   },
   toolbarIcon: {
     display: "flex",
@@ -82,7 +77,7 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 14,
   },
   drawerPaper: {
-    backgroundColor: theme.barraLateral.primary.main,
+    backgroundColor: theme.palette.background.default,
     position: "relative",
     whiteSpace: "nowrap",
     width: drawerWidth,
@@ -108,7 +103,16 @@ const useStyles = makeStyles((theme) => ({
   content: {
     flex: 1,
     overflow: "auto",
-    ...theme.scrollbarStyles,
+    backgroundColor: theme.palette.background.default,
+    color: theme.palette.text.primary,
+    scrollbarWidth: "thin",
+    scrollbarColor: theme.palette.scrollbar.track,
+    "&::-webkit-scrollbar": {
+      width: "6px",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor: theme.palette.scrollbar.thumb,
+    },
   },
   container: {
     paddingTop: theme.spacing(4),
@@ -124,7 +128,20 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(1),
     overflowY: "scroll",
-    ...theme.scrollbarStyles,
+    scrollbarWidth: "thin",
+    scrollbarColor: theme.palette.scrollbar.track,
+    "&::-webkit-scrollbar": {
+      width: "6px",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor: theme.palette.scrollbar.thumb,
+    },
+  },
+  logo: {
+    margin: "10px",
+    maxWidth: "150px",
+    width: "100%",
+    height: "auto",
   },
 }));
 
@@ -139,7 +156,7 @@ const LoggedInLayout = ({ children }) => {
   const { user } = useContext(AuthContext);
 
   const theme = useTheme();
-  const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
+  const greaterThanSm = useMediaQuery(theme.breakpoints.up("sm"));
 
   useEffect(() => {
     if (document.body.offsetWidth > 600) {
@@ -227,7 +244,11 @@ const LoggedInLayout = ({ children }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          <img src={logo} style={{ margin: "0 auto", height: "50px", width: "100%" }} alt="logo" />
+          <img
+            src={logo}
+            className={classes.logo}
+            alt="logo"
+          />
           <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
             <ChevronLeftIcon />
           </IconButton>
@@ -264,11 +285,11 @@ const LoggedInLayout = ({ children }) => {
           <Typography
             component="h8"
             variant="h8"
-            color="#FFFFFF"
+            color="textPrimary"
             noWrap
             className={classes.title}
           >
-            {greaterThenSm ? (
+            {greaterThanSm ? (
               <>
                 Olá <b>{user.name}</b>, Seja bem-vindo.
               </>
@@ -277,11 +298,8 @@ const LoggedInLayout = ({ children }) => {
             )}
           </Typography>
           {user.id && <NotificationsPopOver />}
-
           <AnnouncementsPopover />
-
           <ChatPopover />
-
           <div>
             <IconButton
               aria-label="account of current user"
@@ -289,7 +307,6 @@ const LoggedInLayout = ({ children }) => {
               aria-haspopup="true"
               onClick={handleMenu}
               variant="contained"
-
             >
               <AccountCircle />
             </IconButton>
@@ -320,7 +337,6 @@ const LoggedInLayout = ({ children }) => {
       </AppBar>
       <main className={classes.content}>
         <div className={classes.appBarSpacer} />
-
         {children ? children : null}
       </main>
     </div>
