@@ -16,13 +16,13 @@ import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import logo from "../../assets/zapsimples.png";
 
+
 const useStyles = makeStyles(theme => ({
 	paper: {
 		marginTop: theme.spacing(8),
 		display: "flex",
 		flexDirection: "column",
 		alignItems: "center",
-		backgroundColor: "#332424",
 	},
 	avatar: {
 		margin: theme.spacing(1),
@@ -54,7 +54,7 @@ const Login = () => {
 	};
 
 	return (
-		<Container component="main" maxWidth="xs">
+		<Container component="main" maxWidth="xs" style={{ backgroundColor: "#332424" }}>
 			<CssBaseline />
 			<div className={classes.paper}>
 				<div>
