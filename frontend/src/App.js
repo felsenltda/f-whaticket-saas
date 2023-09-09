@@ -21,7 +21,6 @@ const App = () => {
         },
       },
       palette: {
-        type: "dark",
         primary: { main: "#110142" },
         third: { main: "#E75A4D" }
       },
