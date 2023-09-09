@@ -17,18 +17,18 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import logo from "../../assets/zapsimples.png";
 
 
-// const Copyright = () => {
-// 	return (
-// 		<Typography variant="body2" color="textSecondary" align="center">
-// 			{"Copyleft "}
-// 			<Link color="inherit" href="https://github.com/canove">
-// 				Canove
-// 			</Link>{" "}
-// 			{new Date().getFullYear()}
-// 			{"."}
-// 		</Typography>
-// 	);
-// };
+const Copyright = () => {
+ 	return (
+ 		<Typography variant="body2" color="textSecondary" align="center">
+ 			{"Copyleft "}
+ 			<Link color="inherit" href="https://github.com/felsenltda">
+ 				Felsen Gestão e Tecnologia
+ 			</Link>{" "}
+ 			{new Date().getFullYear()}
+ 			{"."}
+ 		</Typography>
+ 	);
+ };
 
 const useStyles = makeStyles(theme => ({
 	paper: {
@@ -36,6 +36,7 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		flexDirection: "column",
 		alignItems: "center",
+		backgroundColor: "#332424",
 	},
 	avatar: {
 		margin: theme.spacing(1),
