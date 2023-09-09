@@ -28,7 +28,7 @@ const useStyles = makeStyles((theme) => ({
     height: "calc(100% - 58px)",
     overflow: "hidden",
     borderRadius: 0,
-    backgroundColor: "white",
+    backgroundColor: "#333333",
   },
   chatList: {
     display: "flex",
