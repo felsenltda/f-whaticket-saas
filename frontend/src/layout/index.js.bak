@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import clsx from "clsx";
+
 import {
   makeStyles,
   Drawer,
@@ -14,9 +15,11 @@ import {
   useTheme,
   useMediaQuery,
 } from "@material-ui/core";
+
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
 import AccountCircle from "@material-ui/icons/AccountCircle";
+
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
 import UserModal from "../components/UserModal";
@@ -25,6 +28,7 @@ import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
+
 import logo from "../assets/logo.png";
 import { socketConnection } from "../services/socket";
 import ChatPopover from "../pages/Chat/ChatPopover";
@@ -39,6 +43,7 @@ const useStyles = makeStyles((theme) => ({
       height: "calc(100vh - 56px)",
     },
   },
+
   toolbar: {
     paddingRight: 24, // keep right padding when drawer closed
     color: "#FFFFFF",
@@ -121,12 +126,6 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
-  logo: {
-    margin: "10px", // Adiciona margens de 10px em todas as direções
-    maxWidth: "150px", // Limita a largura máxima da imagem a 150px
-    width: "100%", // Mantém a proporção original da imagem
-    height: "auto", // Ajusta a altura automaticamente para manter a proporção
-  },
 }));
 
 const LoggedInLayout = ({ children }) => {
@@ -140,7 +139,7 @@ const LoggedInLayout = ({ children }) => {
   const { user } = useContext(AuthContext);
 
   const theme = useTheme();
-  const greaterThanSm = useMediaQuery(theme.breakpoints.up("sm"));
+  const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
 
   useEffect(() => {
     if (document.body.offsetWidth > 600) {
@@ -228,11 +227,7 @@ const LoggedInLayout = ({ children }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          <img
-            src={logo}
-            className={classes.logo}
-            alt="logo"
-          />
+          <img src={logo} style={{ margin: "0 auto", height: "50px", width: "100%" }} alt="logo" />
           <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
             <ChevronLeftIcon />
           </IconButton>
@@ -273,7 +268,7 @@ const LoggedInLayout = ({ children }) => {
             noWrap
             className={classes.title}
           >
-            {greaterThanSm ? (
+            {greaterThenSm ? (
               <>
                 Olá <b>{user.name}</b>, Seja bem-vindo.
               </>
@@ -294,6 +289,7 @@ const LoggedInLayout = ({ children }) => {
               aria-haspopup="true"
               onClick={handleMenu}
               variant="contained"
+
             >
               <AccountCircle />
             </IconButton>
