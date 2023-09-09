@@ -130,6 +130,9 @@ const useStyles = makeStyles((theme) => ({
   logoImage: {
     maxWidth: "150px",  // Limita a largura da imagem a 150px
     margin: "10px",     // Adiciona margens de 10px em todas as direções
+    display: "flex",
+    justifyContent: "center", // Centraliza verticalmente
+    alignItems: "center",     // Centraliza horizontalmente
   },
 }));
 
