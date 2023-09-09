@@ -40,9 +40,9 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   toolbar: {
-    paddingRight: 24, // keep right padding when drawer closed
-    color: "#FFFFFF",
-    background: theme.barraSuperior.primary.main,
+    paddingRight: 24,
+    color: theme.palette.common.white,
+    background: theme.palette.primary.main,
   },
   toolbarIcon: {
     display: "flex",
@@ -77,7 +77,7 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 14,
   },
   drawerPaper: {
-    backgroundColor: theme.barraLateral.primary.main,
+    backgroundColor: theme.palette.background.default,
     position: "relative",
     whiteSpace: "nowrap",
     width: drawerWidth,
@@ -103,7 +103,16 @@ const useStyles = makeStyles((theme) => ({
   content: {
     flex: 1,
     overflow: "auto",
-    ...theme.scrollbarStyles,
+    backgroundColor: theme.palette.background.default,
+    color: theme.palette.text.primary,
+    scrollbarWidth: "thin",
+    scrollbarColor: theme.palette.scrollbar.track,
+    "&::-webkit-scrollbar": {
+      width: "6px",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor: theme.palette.scrollbar.thumb,
+    },
   },
   container: {
     paddingTop: theme.spacing(4),
@@ -119,13 +128,20 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(1),
     overflowY: "scroll",
-    ...theme.scrollbarStyles,
+    scrollbarWidth: "thin",
+    scrollbarColor: theme.palette.scrollbar.track,
+    "&::-webkit-scrollbar": {
+      width: "6px",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor: theme.palette.scrollbar.thumb,
+    },
   },
   logo: {
-    margin: "10px", // Adiciona margens de 10px em todas as direções
-    maxWidth: "150px", // Limita a largura máxima da imagem a 150px
-    width: "100%", // Mantém a proporção original da imagem
-    height: "auto", // Ajusta a altura automaticamente para manter a proporção
+    margin: "10px",
+    maxWidth: "150px",
+    width: "100%",
+    height: "auto",
   },
 }));
 
@@ -269,7 +285,7 @@ const LoggedInLayout = ({ children }) => {
           <Typography
             component="h8"
             variant="h8"
-            color="#FFFFFF"
+            color="textPrimary"
             noWrap
             className={classes.title}
           >
@@ -324,7 +340,6 @@ const LoggedInLayout = ({ children }) => {
       </AppBar>
       <main className={classes.content}>
         <div className={classes.appBarSpacer} />
-
         {children ? children : null}
       </main>
     </div>
