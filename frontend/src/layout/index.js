@@ -45,9 +45,9 @@ const useStyles = makeStyles((theme) => ({
   },
 
   toolbar: {
-    paddingRight: 24, // keep right padding when drawer closed
+    paddingRight: 24,
     color: "#FFFFFF",
-    background: "#333333",
+    background: "#333333", // Cor de fundo da barra lateral
   },
   toolbarIcon: {
     display: "flex",
@@ -80,9 +80,10 @@ const useStyles = makeStyles((theme) => ({
   title: {
     flexGrow: 1,
     fontSize: 14,
+    color: "#FFFFFF", // Cor do texto
   },
   drawerPaper: {
-    backgroundColor: theme.barraLateral.primary.main,
+    backgroundColor: "#333333", // Cor de fundo da barra lateral
     position: "relative",
     whiteSpace: "nowrap",
     width: drawerWidth,
@@ -126,13 +127,16 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
-  // Adicione a classe para a imagem do logo
   logoImage: {
-    maxWidth: "150px",  // Limita a largura da imagem a 150px
-    margin: "10px",     // Adiciona margens de 10px em todas as direções
+    maxWidth: "150px",
+    margin: "10px auto",
     display: "flex",
-    justifyContent: "center", // Centraliza verticalmente
-    alignItems: "center",     // Centraliza horizontalmente
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  // Adicione a classe para a cor dos ícones
+  iconColor: {
+    color: "#FFFFFF",
   },
 }));
 
@@ -188,7 +192,6 @@ const LoggedInLayout = ({ children }) => {
       socket.disconnect();
       clearInterval(interval);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleMenu = (event) => {
@@ -235,10 +238,13 @@ const LoggedInLayout = ({ children }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          {/* Aplica a classe personalizada à imagem */}
-          <img src={logo} className={classes.logoImage} alt="logo" />
+          <img
+            src={logo}
+            className={clsx(classes.logoImage, classes.iconColor)}
+            alt="logo"
+          />
           <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
-            <ChevronLeftIcon />
+            <ChevronLeftIcon className={classes.iconColor} />
           </IconButton>
         </div>
         <Divider />
@@ -268,12 +274,11 @@ const LoggedInLayout = ({ children }) => {
               drawerOpen && classes.menuButtonHidden
             )}
           >
-            <MenuIcon />
+            <MenuIcon className={classes.iconColor} />
           </IconButton>
           <Typography
             component="h8"
             variant="h8"
-            color="#FFFFFF"
             noWrap
             className={classes.title}
           >
@@ -286,11 +291,8 @@ const LoggedInLayout = ({ children }) => {
             )}
           </Typography>
           {user.id && <NotificationsPopOver />}
-
           <AnnouncementsPopover />
-
           <ChatPopover />
-
           <div>
             <IconButton
               aria-label="account of current user"
@@ -298,9 +300,8 @@ const LoggedInLayout = ({ children }) => {
               aria-haspopup="true"
               onClick={handleMenu}
               variant="contained"
-
             >
-              <AccountCircle />
+              <AccountCircle className={classes.iconColor} />
             </IconButton>
             <Menu
               id="menu-appbar"
@@ -329,7 +330,6 @@ const LoggedInLayout = ({ children }) => {
       </AppBar>
       <main className={classes.content}>
         <div className={classes.appBarSpacer} />
-
         {children ? children : null}
       </main>
     </div>

@@ -47,7 +47,7 @@ const useStyles = makeStyles((theme) => ({
   toolbar: {
     paddingRight: 24, // keep right padding when drawer closed
     color: "#FFFFFF",
-    background: theme.barraSuperior.primary.main,
+    background: "#333333",
   },
   toolbarIcon: {
     display: "flex",
@@ -125,6 +125,14 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+  },
+  // Adicione a classe para a imagem do logo
+  logoImage: {
+    maxWidth: "150px",  // Limita a largura da imagem a 150px
+    margin: "10px",     // Adiciona margens de 10px em todas as direções
+    display: "flex",
+    justifyContent: "center", // Centraliza verticalmente
+    alignItems: "center",     // Centraliza horizontalmente
   },
 }));
 
@@ -227,7 +235,8 @@ const LoggedInLayout = ({ children }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          <img src={logo} style={{ margin: "0 auto", height: "50px", width: "100%" }} alt="logo" />
+          {/* Aplica a classe personalizada à imagem */}
+          <img src={logo} className={classes.logoImage} alt="logo" />
           <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
             <ChevronLeftIcon />
           </IconButton>
