@@ -14,9 +14,9 @@ import SpeedIcon from "@material-ui/icons/Speed";
 import GroupIcon from "@material-ui/icons/Group";
 import AssignmentIcon from "@material-ui/icons/Assignment";
 import PersonIcon from "@material-ui/icons/Person";
-import TodayIcon from "@material-ui/icons/Today";
-import BlockIcon from "@material-ui/icons/Block";
-import DoneIcon from "@material-ui/icons/Done";
+import TodayIcon from '@material-ui/icons/Today';
+import BlockIcon from '@material-ui/icons/Block';
+import DoneIcon from '@material-ui/icons/Done';
 
 import { makeStyles } from "@material-ui/core/styles";
 import { grey, blue } from "@material-ui/core/colors";
@@ -47,7 +47,6 @@ const useStyles = makeStyles((theme) => ({
     height: 240,
     overflowY: "auto",
     ...theme.scrollbarStyles,
-    backgroundColor: "#1A1A1A", // Cor de fundo do Paper
   },
   cardAvatar: {
     fontSize: "55px",
@@ -146,6 +145,8 @@ const Dashboard = () => {
     }
 
     const data = await find(params);
+
+
 
     setCounters(data.counters);
     if (isArray(data.attendants)) {

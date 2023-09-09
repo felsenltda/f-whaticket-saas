@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import clsx from "clsx";
+
 import {
   makeStyles,
   Drawer,
@@ -14,9 +15,11 @@ import {
   useTheme,
   useMediaQuery,
 } from "@material-ui/core";
+
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
 import AccountCircle from "@material-ui/icons/AccountCircle";
+
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
 import UserModal from "../components/UserModal";
@@ -25,9 +28,10 @@ import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
+
+import logo from "../assets/logo.png";
 import { socketConnection } from "../services/socket";
 import ChatPopover from "../pages/Chat/ChatPopover";
-import logo from "../assets/logo.png";
 
 const drawerWidth = 300;
 
@@ -121,10 +125,6 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
-  },
-  logo: {
-    maxWidth: "150px",
-    margin: "20px", // Margens de 20px em todos os lados
   },
 }));
 
@@ -227,11 +227,7 @@ const LoggedInLayout = ({ children }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          <img
-            src={logo}
-            className={classes.logo} // Aplicando a classe de estilo ao logo
-            alt="logo"
-          />
+          <img src={logo} style={{ margin: "0 auto", height: "50px", width: "100%" }} alt="logo" />
           <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
             <ChevronLeftIcon />
           </IconButton>
@@ -293,6 +289,7 @@ const LoggedInLayout = ({ children }) => {
               aria-haspopup="true"
               onClick={handleMenu}
               variant="contained"
+
             >
               <AccountCircle />
             </IconButton>
@@ -323,6 +320,7 @@ const LoggedInLayout = ({ children }) => {
       </AppBar>
       <main className={classes.content}>
         <div className={classes.appBarSpacer} />
+
         {children ? children : null}
       </main>
     </div>

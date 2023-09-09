@@ -4,52 +4,61 @@ import "react-toastify/dist/ReactToastify.css";
 
 import { createTheme, ThemeProvider } from "@material-ui/core/styles";
 import { ptBR } from "@material-ui/core/locale";
+import { grey, blue } from "@material-ui/core/colors";
 
 const App = () => {
   const [locale, setLocale] = useState();
 
-  const theme = createTheme(
-    {
-      scrollbarStyles: {
-        "&::-webkit-scrollbar": {
-          width: "8px",
-          height: "8px",
-        },
-        "&::-webkit-scrollbar-thumb": {
-          boxShadow: "inset 0 0 6px rgba(170, 0, 126, 126)",
-          backgroundColor: "#2B5A80",
-        },
+  const theme = createTheme({
+    palette: {
+      primary: {
+        main: "#110142",
       },
-      palette: {
-        type: "dark", // Definir o tipo de paleta como escuro (dark)
-        primary: { main: "#444444" }, // Cor primária (vermelho)
-        secondary: { main: "#333333" }, // Cor secundária (roxo)
+      secondary: {
+        main: "#E75A4D",
       },
-      barraSuperior: {
-        primary: {
-          main:
-            "linear-gradient(to right, #444444 100%, #444444 26%, #444444 100%)",
-        },
-        secondary: { main: "#ffffff" }, // Cor da barra superior (branco)
+      background: {
+        default: "#121212", // Cor de fundo principal para o tema escuro
+        paper: "#1E1E1E", // Cor de fundo para componentes de papel (por exemplo, Paper)
       },
-      barraLateral: {
-        primary: { main: "#1A1A1A" }, // Cor da barra lateral (cinza escuro)
-      },
-      icons: {
-        primary: { main: "#FFFFFF" }, // Cor dos ícones (branco)
-      },
-      textColorMenu: {
-        primary: { main: "#FFFFFF" }, // Cor do texto do menu (branco)
-        secondary: { main: "#FFFFFF" }, // Cor secundária do texto do menu (branco)
+      text: {
+        primary: "#FFFFFF", // Cor do texto principal
+        secondary: grey[500], // Cor do texto secundário
       },
     },
-    locale
-  );
+    scrollbarStyles: {
+      "&::-webkit-scrollbar": {
+        width: "8px",
+        height: "8px",
+      },
+      "&::-webkit-scrollbar-thumb": {
+        boxShadow: "inset 0 0 6px rgba(170, 0, 126, 126)",
+        backgroundColor: "#2B5A80",
+      },
+    },
+    barraSuperior: {
+      primary: {
+        main: "linear-gradient(to right, #E75A4D 100%, #E75A4D 26%, #E75A4D 100%)",
+      },
+      secondary: {
+        main: "#ffffff",
+      },
+    },
+    barraLateral: {
+      primary: {
+        main: "#F7F6F5",
+      },
+    },
+    icons: {
+      primary: {
+        main: "#E75A4D",
+      },
+    },
+  });
 
   useEffect(() => {
     const i18nlocale = localStorage.getItem("i18nextLng");
-    const browserLocale =
-      i18nlocale.substring(0, 2) + i18nlocale.substring(3, 5);
+    const browserLocale = i18nlocale.substring(0, 2) + i18nlocale.substring(3, 5);
 
     if (browserLocale === "ptBR") {
       setLocale(ptBR);
