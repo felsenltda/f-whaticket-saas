@@ -6,7 +6,7 @@ import Typography from "@material-ui/core/Typography";
 import { makeStyles, createTheme, ThemeProvider } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import logo from "../../assets/zapsimples.png";
+import logo from "../../assets/logo.png";
 
 const theme = createTheme({
   palette: {
