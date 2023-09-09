@@ -22,13 +22,13 @@ const App = () => {
       },
       palette: {
         type: "dark", // Definir o tipo de paleta como escuro (dark)
-        primary: { main: "#E75A4D" }, // Cor primária (vermelho)
-        secondary: { main: "#110142" }, // Cor secundária (roxo)
+        primary: { main: "#444444" }, // Cor primária (vermelho)
+        secondary: { main: "#333333" }, // Cor secundária (roxo)
       },
       barraSuperior: {
         primary: {
           main:
-            "linear-gradient(to right, #E75A4D 100%, #E75A4D 26%, #E75A4D 100%)",
+            "linear-gradient(to right, #444444 100%, #444444 26%, #444444 100%)",
         },
         secondary: { main: "#ffffff" }, // Cor da barra superior (branco)
       },
