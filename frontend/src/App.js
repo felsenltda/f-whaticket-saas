@@ -17,29 +17,29 @@ const App = () => {
         },
         '&::-webkit-scrollbar-thumb': {
           boxShadow: 'inset 0 0 6px rgba(170, 0, 126, 126)',
-          backgroundColor: '#2B5A80',
+          backgroundColor: '#446ffc',
         },
       },
       palette: {
-        primary: { main: "#110142" },
-        third: { main: "#E75A4D" }
+        primary: { main: "#446ffc" },
+        third: { main: "#d17308" }
       },
 
       barraSuperior: {
-        primary: { main: "linear-gradient(to right, #E75A4D 100%, #E75A4D 26%, #E75A4D 100%)" },
-        secondary: { main: "#ffffff" },
+        primary: { main: "linear-gradient(to right, #446ffc 100%, #446ffc 26%, #446ffc 100%)" },
+        secondary: { main: "#000000" },
       },
 
       barraLateral: {
-        primary: { main: "#F7F6F5" },
+        primary: { main: "#e3e5e8" },
       },
 
       icons: {
-        primary: { main: "#E75A4D" }
+        primary: { main: "#446ffc" }
       },
       textColorMenu: {
         primary: { main: "#FFFFFF" },
-        secondary: { main: "#FFFFFF" }
+        secondary: { main: "#446ffc" }
       
       },    },
     locale
