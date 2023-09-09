@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import clsx from "clsx";
+
 import {
   makeStyles,
   Drawer,
@@ -8,15 +9,17 @@ import {
   List,
   Typography,
   Divider,
+  MenuItem,
   IconButton,
   Menu,
   useTheme,
   useMediaQuery,
-  ThemeProvider,
 } from "@material-ui/core";
+
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
-import AccountCircleIcon from "@material-ui/icons/AccountCircle";
+import AccountCircle from "@material-ui/icons/AccountCircle";
+
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
 import UserModal from "../components/UserModal";
@@ -25,6 +28,7 @@ import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
+
 import logo from "../assets/logo.png";
 import { socketConnection } from "../services/socket";
 import ChatPopover from "../pages/Chat/ChatPopover";
@@ -39,8 +43,11 @@ const useStyles = makeStyles((theme) => ({
       height: "calc(100vh - 56px)",
     },
   },
+
   toolbar: {
-    paddingRight: 24,
+    paddingRight: 24, // keep right padding when drawer closed
+    color: "#FFFFFF",
+    background: "#333333",
   },
   toolbarIcon: {
     display: "flex",
@@ -75,6 +82,7 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 14,
   },
   drawerPaper: {
+    backgroundColor: theme.barraLateral.primary.main,
     position: "relative",
     whiteSpace: "nowrap",
     width: drawerWidth,
@@ -100,6 +108,7 @@ const useStyles = makeStyles((theme) => ({
   content: {
     flex: 1,
     overflow: "auto",
+    ...theme.scrollbarStyles,
   },
   container: {
     paddingTop: theme.spacing(4),
@@ -115,17 +124,15 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(1),
     overflowY: "scroll",
+    ...theme.scrollbarStyles,
   },
+  // Adicione a classe para a imagem do logo
   logoImage: {
-    maxWidth: "150px",
-    margin: "10px auto",
+    maxWidth: "150px",  // Limita a largura da imagem a 150px
+    margin: "10px",     // Adiciona margens de 10px em todas as direções
     display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  // Adicione a classe para a cor dos ícones
-  iconColor: {
-    color: theme.palette.common.white,
+    justifyContent: "center", // Centraliza verticalmente
+    alignItems: "center",     // Centraliza horizontalmente
   },
 }));
 
@@ -140,7 +147,7 @@ const LoggedInLayout = ({ children }) => {
   const { user } = useContext(AuthContext);
 
   const theme = useTheme();
-  const greaterThanSm = useMediaQuery(theme.breakpoints.up("sm"));
+  const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
 
   useEffect(() => {
     if (document.body.offsetWidth > 600) {
@@ -181,6 +188,7 @@ const LoggedInLayout = ({ children }) => {
       socket.disconnect();
       clearInterval(interval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleMenu = (event) => {
@@ -214,119 +222,117 @@ const LoggedInLayout = ({ children }) => {
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <div className={classes.root}>
-        <Drawer
-          variant={drawerVariant}
-          className={clsx(
+    <div className={classes.root}>
+      <Drawer
+        variant={drawerVariant}
+        className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}
+        classes={{
+          paper: clsx(
             classes.drawerPaper,
             !drawerOpen && classes.drawerPaperClose
-          )}
-          classes={{
-            paper: clsx(
-              classes.drawerPaper,
-              !drawerOpen && classes.drawerPaperClose
-            ),
-          }}
-          open={drawerOpen}
-        >
-          <div className={classes.toolbarIcon}>
-            <img
-              src={logo}
-              className={clsx(classes.logoImage, classes.iconColor)}
-              alt="logo"
-            />
-            <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
-              <ChevronLeftIcon className={classes.iconColor} />
-            </IconButton>
-          </div>
-          <Divider />
-          <List className={classes.containerWithScroll}>
-            <MainListItems drawerClose={drawerClose} />
-          </List>
-          <Divider />
-        </Drawer>
-        <UserModal
-          open={userModalOpen}
-          onClose={() => setUserModalOpen(false)}
-          userId={user?.id}
-        />
-        <AppBar
-          position="absolute"
-          className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
-          color="primary"
-        >
-          <Toolbar variant="dense" className={classes.toolbar}>
+          ),
+        }}
+        open={drawerOpen}
+      >
+        <div className={classes.toolbarIcon}>
+          {/* Aplica a classe personalizada à imagem */}
+          <img src={logo} className={classes.logoImage} alt="logo" />
+          <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
+            <ChevronLeftIcon />
+          </IconButton>
+        </div>
+        <Divider />
+        <List className={classes.containerWithScroll}>
+          <MainListItems drawerClose={drawerClose} />
+        </List>
+        <Divider />
+      </Drawer>
+      <UserModal
+        open={userModalOpen}
+        onClose={() => setUserModalOpen(false)}
+        userId={user?.id}
+      />
+      <AppBar
+        position="absolute"
+        className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
+        color="primary"
+      >
+        <Toolbar variant="dense" className={classes.toolbar}>
+          <IconButton
+            edge="start"
+            variant="contained"
+            aria-label="open drawer"
+            onClick={() => setDrawerOpen(!drawerOpen)}
+            className={clsx(
+              classes.menuButton,
+              drawerOpen && classes.menuButtonHidden
+            )}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Typography
+            component="h8"
+            variant="h8"
+            color="#FFFFFF"
+            noWrap
+            className={classes.title}
+          >
+            {greaterThenSm ? (
+              <>
+                Olá <b>{user.name}</b>, Seja bem-vindo.
+              </>
+            ) : (
+              user.name
+            )}
+          </Typography>
+          {user.id && <NotificationsPopOver />}
+
+          <AnnouncementsPopover />
+
+          <ChatPopover />
+
+          <div>
             <IconButton
-              edge="start"
+              aria-label="account of current user"
+              aria-controls="menu-appbar"
+              aria-haspopup="true"
+              onClick={handleMenu}
               variant="contained"
-              aria-label="open drawer"
-              onClick={() => setDrawerOpen(!drawerOpen)}
-              className={clsx(
-                classes.menuButton,
-                drawerOpen && classes.menuButtonHidden
-              )}
+
             >
-              <MenuIcon className={classes.iconColor} />
+              <AccountCircle />
             </IconButton>
-            <Typography
-              component="h8"
-              variant="h8"
-              noWrap
-              className={classes.title}
+            <Menu
+              id="menu-appbar"
+              anchorEl={anchorEl}
+              getContentAnchorEl={null}
+              anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "right",
+              }}
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "right",
+              }}
+              open={menuOpen}
+              onClose={handleCloseMenu}
             >
-              {greaterThanSm ? (
-                <>
-                  Olá <b>{user.name}</b>, Seja bem-vindo.
-                </>
-              ) : (
-                user.name
-              )}
-            </Typography>
-            {user.id && <NotificationsPopOver />}
-            <AnnouncementsPopover />
-            <ChatPopover />
-            <div>
-              <IconButton
-                aria-label="account of current user"
-                aria-controls="menu-appbar"
-                aria-haspopup="true"
-                onClick={handleMenu}
-                variant="contained"
-              >
-                <AccountCircleIcon className={classes.iconColor} />
-              </IconButton>
-              <Menu
-                id="menu-appbar"
-                anchorEl={anchorEl}
-                getContentAnchorEl={null}
-                anchorOrigin={{
-                  vertical: "bottom",
-                  horizontal: "right",
-                }}
-                transformOrigin={{
-                  vertical: "top",
-                  horizontal: "right",
-                }}
-                open={menuOpen}
-                onClose={handleCloseMenu}
-              >
-                <MenuItem onClick={handleOpenUserModal}>
-                  {i18n.t("mainDrawer.appBar.user.profile")}
-                </MenuItem>
-                <MenuItem onClick={handleClickLogout}>
-                  {i18n.t("mainDrawer.appBar.user.logout")}
-                </MenuItem>
-              </Menu>
-            </div>
-          </Toolbar>
-        </AppBar>
-        <main className={classes.content}>
-          <div className={classes.appBarSpacer} />
-          {children ? children : null}
-        </main>
-      </div>
-    </ThemeProvider>
+              <MenuItem onClick={handleOpenUserModal}>
+                {i18n.t("mainDrawer.appBar.user.profile")}
+              </MenuItem>
+              <MenuItem onClick={handleClickLogout}>
+                {i18n.t("mainDrawer.appBar.user.logout")}
+              </MenuItem>
+            </Menu>
+          </div>
+        </Toolbar>
+      </AppBar>
+      <main className={classes.content}>
+        <div className={classes.appBarSpacer} />
+
+        {children ? children : null}
+      </main>
+    </div>
   );
 };
 
