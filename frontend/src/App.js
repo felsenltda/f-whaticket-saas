@@ -12,7 +12,7 @@ const App = () => {
       palette: {
         type: "dark", // Defina o tema como escuro
         primary: { main: "#446ffc" },
-        secondary: { main: "#d17308" },
+        secondary: { main: "#333333" },
       },
       scrollbarStyles: {
         "&::-webkit-scrollbar": {
@@ -29,7 +29,7 @@ const App = () => {
           main:
             "linear-gradient(to right, #446ffc 100%, #446ffc 26%, #446ffc 100%)",
         },
-        secondary: { main: "#000000" },
+        secondary: { main: "#333333" },
       },
       barraLateral: {
         primary: { main: "#e3e5e8" },
