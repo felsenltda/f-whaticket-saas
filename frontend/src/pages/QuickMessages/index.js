@@ -1,26 +1,26 @@
 import React, { useState, useEffect, useContext } from "react";
+import {
+  makeStyles,
+  Button,
+  Paper,
+  ThemeProvider,
+} from "@material-ui/core";
+import { createTheme } from "@material-ui/core/styles";
+import QuickMessagesTable from "../../components/QuickMessagesTable";
+import QuickMessageDialog from "../../components/QuickMessageDialog";
+import ConfirmationModal from "../../components/ConfirmationModal";
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import Title from "../../components/Title";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
-import { makeStyles, Button, Paper } from "@material-ui/core";
-import { makeStyles, createTheme, ThemeProvider } from "@material-ui/core/styles";
-import QuickMessagesTable from "../../components/QuickMessagesTable";
-import QuickMessageDialog from "../../components/QuickMessageDialog";
-import ConfirmationModal from "../../components/ConfirmationModal";
-
 import { i18n } from "../../translate/i18n";
 import { toast } from "react-toastify";
-
 import useQuickMessages from "../../hooks/useQuickMessages";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
-const theme = createTheme({
+const darkTheme = createTheme({
   palette: {
     type: "dark", // Tema escuro
-    primary: {
-      main: "#2196F3", // Cor primária (azul)
-    },
   },
 });
 
@@ -90,7 +90,7 @@ function QuickMessages(props) {
     try {
       await saveMessage(message);
       await loadingQuickMessages();
-      toast.success("Messagem adicionada com sucesso.");
+      toast.success("Mensagem adicionada com sucesso.");
     } catch (e) {
       toast.error(e);
     }
@@ -101,7 +101,7 @@ function QuickMessages(props) {
     try {
       await updateMessage(message);
       await loadingQuickMessages();
-      toast.success("Messagem atualizada com sucesso.");
+      toast.success("Mensagem atualizada com sucesso.");
     } catch (e) {
       toast.error(e);
     }
@@ -112,52 +112,54 @@ function QuickMessages(props) {
     try {
       await deleteMessage(message.id);
       await loadingQuickMessages();
-      toast.success("Messagem excluída com sucesso.");
+      toast.success("Mensagem excluída com sucesso.");
     } catch (e) {
       toast.error(e);
     }
   };
 
   return (
-    <MainContainer>
-      <MainHeader>
-        <Title>{i18n.t("quickMessages.title")}</Title>
-        <MainHeaderButtonsWrapper>
-          <Button variant="contained" color="primary" onClick={handleOpenToAdd}>
-            {i18n.t("quickMessages.buttons.add")}
-          </Button>
-        </MainHeaderButtonsWrapper>
-      </MainHeader>
-      <Paper className={classes.mainPaper} variant="outlined">
-        <QuickMessagesTable
-          readOnly={false}
-          messages={messages}
-          showLoading={loading}
-          editMessage={handleOpenToEdit}
-          deleteMessage={(message) => {
-            setMessageSelected(message);
-            setShowOnDeleteDialog(true);
-          }}
+    <ThemeProvider theme={darkTheme}>
+      <MainContainer>
+        <MainHeader>
+          <Title>{i18n.t("quickMessages.title")}</Title>
+          <MainHeaderButtonsWrapper>
+            <Button variant="contained" color="primary" onClick={handleOpenToAdd}>
+              {i18n.t("quickMessages.buttons.add")}
+            </Button>
+          </MainHeaderButtonsWrapper>
+        </MainHeader>
+        <Paper className={classes.mainPaper} variant="outlined">
+          <QuickMessagesTable
+            readOnly={false}
+            messages={messages}
+            showLoading={loading}
+            editMessage={handleOpenToEdit}
+            deleteMessage={(message) => {
+              setMessageSelected(message);
+              setShowOnDeleteDialog(true);
+            }}
+          />
+        </Paper>
+        <QuickMessageDialog
+          messageSelected={messageSelected}
+          modalOpen={modalOpen}
+          onClose={handleCloseModal}
+          editMessage={handleEdit}
+          saveMessage={handleSave}
         />
-      </Paper>
-      <QuickMessageDialog
-        messageSelected={messageSelected}
-        modalOpen={modalOpen}
-        onClose={handleCloseModal}
-        editMessage={handleEdit}
-        saveMessage={handleSave}
-      />
-      <ConfirmationModal
-        title="Excluir Registro"
-        open={showOnDeleteDialog}
-        onClose={setShowOnDeleteDialog}
-        onConfirm={async () => {
-          await handleDelete(messageSelected);
-        }}
-      >
-        Deseja realmente excluir este registro?
-      </ConfirmationModal>
-    </MainContainer>
+        <ConfirmationModal
+          title="Excluir Registro"
+          open={showOnDeleteDialog}
+          onClose={setShowOnDeleteDialog}
+          onConfirm={async () => {
+            await handleDelete(messageSelected);
+          }}
+        >
+          Deseja realmente excluir este registro?
+        </ConfirmationModal>
+      </MainContainer>
+    </ThemeProvider>
   );
 }
 
