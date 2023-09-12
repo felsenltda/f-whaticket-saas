@@ -14,7 +14,6 @@ import { toast } from "react-toastify";
 
 import useQuickMessages from "../../hooks/useQuickMessages";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { createTheme, ThemeProvider } from "@material-ui/core/styles";
 
 const darkTheme = createTheme({
   palette: {
@@ -116,47 +115,45 @@ function QuickMessages(props) {
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <MainContainer>
-        <MainHeader>
-          <Title>{i18n.t("quickMessages.title")}</Title>
-          <MainHeaderButtonsWrapper>
-            <Button variant="contained" color="primary" onClick={handleOpenToAdd}>
-              {i18n.t("quickMessages.buttons.add")}
-            </Button>
-          </MainHeaderButtonsWrapper>
-        </MainHeader>
-        <Paper className={classes.mainPaper} variant="outlined">
-          <QuickMessagesTable
-            readOnly={false}
-            messages={messages}
-            showLoading={loading}
-            editMessage={handleOpenToEdit}
-            deleteMessage={(message) => {
-              setMessageSelected(message);
-              setShowOnDeleteDialog(true);
-            }}
-          />
-        </Paper>
-        <QuickMessageDialog
-          messageSelected={messageSelected}
-          modalOpen={modalOpen}
-          onClose={handleCloseModal}
-          editMessage={handleEdit}
-          saveMessage={handleSave}
-        />
-        <ConfirmationModal
-          title="Excluir Registro"
-          open={showOnDeleteDialog}
-          onClose={setShowOnDeleteDialog}
-          onConfirm={async () => {
-            await handleDelete(messageSelected);
+    <MainContainer>
+      <MainHeader>
+        <Title>{i18n.t("quickMessages.title")}</Title>
+        <MainHeaderButtonsWrapper>
+          <Button variant="contained" color="primary" onClick={handleOpenToAdd}>
+            {i18n.t("quickMessages.buttons.add")}
+          </Button>
+        </MainHeaderButtonsWrapper>
+      </MainHeader>
+      <Paper className={classes.mainPaper} variant="outlined">
+        <QuickMessagesTable
+          readOnly={false}
+          messages={messages}
+          showLoading={loading}
+          editMessage={handleOpenToEdit}
+          deleteMessage={(message) => {
+            setMessageSelected(message);
+            setShowOnDeleteDialog(true);
           }}
-        >
-          Deseja realmente excluir este registro?
-        </ConfirmationModal>
-      </MainContainer>
-    </ThemeProvider>
+        />
+      </Paper>
+      <QuickMessageDialog
+        messageSelected={messageSelected}
+        modalOpen={modalOpen}
+        onClose={handleCloseModal}
+        editMessage={handleEdit}
+        saveMessage={handleSave}
+      />
+      <ConfirmationModal
+        title="Excluir Registro"
+        open={showOnDeleteDialog}
+        onClose={setShowOnDeleteDialog}
+        onConfirm={async () => {
+          await handleDelete(messageSelected);
+        }}
+      >
+        Deseja realmente excluir este registro?
+      </ConfirmationModal>
+    </MainContainer>
   );
 }
 
