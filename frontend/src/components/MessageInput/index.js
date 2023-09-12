@@ -33,7 +33,7 @@ const Mp3Recorder = new MicRecorder({ bitRate: 128 });
 
 const useStyles = makeStyles(theme => ({
 	mainWrapper: {
-		background: "#eee",
+		background: "#333333",
 		display: "flex",
 		flexDirection: "column",
 		alignItems: "center",
@@ -41,7 +41,7 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	newMessageBox: {
-		background: "#eee",
+		background: "#333333",
 		width: "100%",
 		display: "flex",
 		padding: "7px",
@@ -51,7 +51,7 @@ const useStyles = makeStyles(theme => ({
 	messageInputWrapper: {
 		padding: 6,
 		marginRight: 7,
-		background: "#fff",
+		background: "#333333",
 		display: "flex",
 		borderRadius: 20,
 		flex: 1,
