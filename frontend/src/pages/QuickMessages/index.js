@@ -26,6 +26,7 @@ const theme = createTheme({
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
+    backgroundColor: "#333333",
     flex: 1,
     padding: theme.spacing(1),
     overflowY: "scroll",
