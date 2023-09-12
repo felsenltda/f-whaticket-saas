@@ -15,12 +15,6 @@ import { toast } from "react-toastify";
 import useQuickMessages from "../../hooks/useQuickMessages";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
-const darkTheme = createTheme({
-  palette: {
-    type: "dark", // Aplica o tema dark
-  },
-});
-
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
