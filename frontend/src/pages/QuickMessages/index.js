@@ -15,13 +15,21 @@ import { toast } from "react-toastify";
 import useQuickMessages from "../../hooks/useQuickMessages";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
+const theme = createTheme({
+  palette: {
+    type: "dark", // Tema escuro
+    primary: {
+      main: "#2196F3", // Cor primária (azul)
+    },
+  },
+});
+
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
     padding: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
-    backgroundColor:"#333333",
   },
 }));
 
