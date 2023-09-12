@@ -4,6 +4,7 @@ import { makeStyles } from "@material-ui/core/styles";
 
 const useStyles = makeStyles(theme => ({
 	contactsHeader: {
+		backgroundColor:"#333333",
 		display: "flex",
 		alignItems: "center",
 		padding: "0px 6px 6px 6px",
