@@ -162,5 +162,4 @@ function QuickMessages(props) {
     </ThemeProvider>
   );
 }
-
 export default QuickMessages;
