@@ -29,6 +29,7 @@ const useStyles = makeStyles((theme) => ({
     minHeight: "200px",
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+	backgoundColor: "#333333",
   },
   heading: {
     fontSize: theme.typography.pxToRem(15),
