@@ -4,7 +4,7 @@ import MainHeader from "../../components/MainHeader";
 import Title from "../../components/Title";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import { makeStyles, Button, Paper } from "@material-ui/core";
-
+import { makeStyles, createTheme, ThemeProvider } from "@material-ui/core/styles";
 import QuickMessagesTable from "../../components/QuickMessagesTable";
 import QuickMessageDialog from "../../components/QuickMessageDialog";
 import ConfirmationModal from "../../components/ConfirmationModal";
@@ -14,6 +14,15 @@ import { toast } from "react-toastify";
 
 import useQuickMessages from "../../hooks/useQuickMessages";
 import { AuthContext } from "../../context/Auth/AuthContext";
+
+const theme = createTheme({
+  palette: {
+    type: "dark", // Tema escuro
+    primary: {
+      main: "#2196F3", // Cor primária (azul)
+    },
+  },
+});
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
