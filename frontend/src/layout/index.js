@@ -45,9 +45,9 @@ const useStyles = makeStyles((theme) => ({
   },
 
   toolbar: {
-    paddingRight: 24,
-    background: theme.palette.background.paper, // Usar a cor de fundo do tema escuro
-    color: theme.palette.primary.contrastText, // Usar a cor de texto do tema escuro
+    paddingRight: 24, // keep right padding when drawer closed
+    color: theme.palette.text.primary, // Cor do texto
+    background: theme.palette.background.default, // Cor de fundo
   },
   toolbarIcon: {
     display: "flex",
@@ -82,7 +82,7 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 14,
   },
   drawerPaper: {
-    backgroundColor: theme.palette.background.default, // Usar a cor de fundo do tema escuro
+    backgroundColor: theme.palette.background.paper, // Cor de fundo da barra lateral
     position: "relative",
     whiteSpace: "nowrap",
     width: drawerWidth,
@@ -108,7 +108,7 @@ const useStyles = makeStyles((theme) => ({
   content: {
     flex: 1,
     overflow: "auto",
-    ...theme.scrollbarStyles,
+    ...theme.scrollbarStyles, // Estilos para a scrollbar
   },
   container: {
     paddingTop: theme.spacing(4),
@@ -124,14 +124,7 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(1),
     overflowY: "scroll",
-    ...theme.scrollbarStyles,
-  },
-  logoImage: {
-    maxWidth: "150px",
-    margin: "10px auto",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
+    ...theme.scrollbarStyles, // Estilos para a scrollbar
   },
 }));
 
@@ -234,7 +227,7 @@ const LoggedInLayout = ({ children }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          <img src={logo} className={classes.logoImage} alt="logo" />
+          <img src={logo} style={{ margin: "0 auto", height: "50px", width: "40%" }} alt="logo" />
           <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
             <ChevronLeftIcon />
           </IconButton>
@@ -253,6 +246,7 @@ const LoggedInLayout = ({ children }) => {
       <AppBar
         position="absolute"
         className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
+        color="primary"
       >
         <Toolbar variant="dense" className={classes.toolbar}>
           <IconButton
@@ -270,6 +264,7 @@ const LoggedInLayout = ({ children }) => {
           <Typography
             component="h8"
             variant="h8"
+            color="inherit"
             noWrap
             className={classes.title}
           >

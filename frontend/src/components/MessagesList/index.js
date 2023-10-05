@@ -25,7 +25,7 @@ import MarkdownWrapper from "../MarkdownWrapper";
 import VcardPreview from "../VcardPreview";
 import ModalImageCors from "../ModalImageCors";
 import MessageOptionsMenu from "../MessageOptionsMenu";
-import whatsBackground from "../../assets/wa-background.png";
+import whatsBackground from "../../assets/pxfuel.png";
 import LocationPreview from "../LocationPreview";
 
 import api from "../../services/api";

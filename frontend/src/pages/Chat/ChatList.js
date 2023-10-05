@@ -28,7 +28,7 @@ const useStyles = makeStyles((theme) => ({
     height: "calc(100% - 58px)",
     overflow: "hidden",
     borderRadius: 0,
-    backgroundColor: "#333333",
+    backgroundColor: "white",
   },
   chatList: {
     display: "flex",
@@ -110,7 +110,7 @@ export default function ChatList({
   const getItemStyle = (chat) => {
     return {
       borderLeft: chat.uuid === id ? "6px solid #002d6e" : null,
-      backgroundColor: chat.uuid === id ? "#333333" : null,
+      backgroundColor: chat.uuid === id ? "#eee" : null,
     };
   };
 

@@ -41,7 +41,7 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     height: "100%",
     border: "1px solid rgba(0, 0, 0, 0.12)",
-    backgroundColor: "#333333",
+    backgroundColor: "#eee",
   },
   gridItem: {
     height: "100%",

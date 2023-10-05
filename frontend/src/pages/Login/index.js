@@ -120,7 +120,7 @@ const Login = () => {
             </Button>
           </form>
           <Typography variant="body2" color="textSecondary" className={classes.copyright}>
-            &copy; {currentYear} Felsen Gestão e Tecnologia - Todos os direitos reservados
+            &copy; {currentYear} Wase Hub - Todos os direitos reservados
           </Typography>
         </div>
       </Container>

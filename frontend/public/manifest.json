@@ -1,6 +1,6 @@
 {
-	"short_name": "Felsen Whaticket",
-	"name": "Felsen Whaticket",
+	"short_name": "Zap+",
+	"name": "Zap+",
 	"icons": [
 		{
 			"src": "favicon.ico",
@@ -15,6 +15,6 @@
 	],
 	"start_url": ".",
 	"display": "standalone",
-	"theme_color": "#333333",
-	"background_color": "#333333"
+	"theme_color": "#000000",
+	"background_color": "#A9A9A9"
 }

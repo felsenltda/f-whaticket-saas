@@ -1,45 +1,43 @@
 import React, { useState, useEffect } from "react";
 import Routes from "./routes";
 import "react-toastify/dist/ReactToastify.css";
+
 import { createTheme, ThemeProvider } from "@material-ui/core/styles";
 import { ptBR } from "@material-ui/core/locale";
 
 const App = () => {
   const [locale, setLocale] = useState();
 
-  const theme = createTheme(
+  const darkTheme = createTheme(
     {
       palette: {
-        type: "dark", // Defina o tema como escuro
+        type: "dark", // Definir o tipo de tema como escuro
         primary: { main: "#446ffc" },
-        secondary: { main: "#333333" },
+        third: { main: "#d17308" }
       },
       scrollbarStyles: {
-        "&::-webkit-scrollbar": {
-          width: "8px",
-          height: "8px",
+        '&::-webkit-scrollbar': {
+          width: '8px',
+          height: '8px',
         },
-        "&::-webkit-scrollbar-thumb": {
-          boxShadow: "inset 0 0 6px rgba(170, 0, 126, 126)",
-          backgroundColor: "#446ffc",
+        '&::-webkit-scrollbar-thumb': {
+          boxShadow: 'inset 0 0 6px rgba(170, 0, 126, 126)',
+          backgroundColor: '#446ffc',
         },
       },
       barraSuperior: {
-        primary: {
-          main:
-            "linear-gradient(to right, #446ffc 100%, #446ffc 26%, #446ffc 100%)",
-        },
-        secondary: { main: "#333333" },
+        primary: { main: "linear-gradient(to right, #446ffc 100%, #446ffc 26%, #446ffc 100%)" },
+        secondary: { main: "#000000" },
       },
       barraLateral: {
         primary: { main: "#e3e5e8" },
       },
       icons: {
-        primary: { main: "#FFFFFF" }, // Altere a cor dos ícones para branco
+        primary: { main: "#446ffc" }
       },
       textColorMenu: {
         primary: { main: "#FFFFFF" },
-        secondary: { main: "#446ffc" },
+        secondary: { main: "#446ffc" }
       },
     },
     locale
@@ -56,7 +54,7 @@ const App = () => {
   }, []);
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={darkTheme}>
       <Routes />
     </ThemeProvider>
   );
