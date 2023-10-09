@@ -27,6 +27,12 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import notifySound from "../../assets/chat_notify.mp3";
 import useSound from "use-sound";
 
+const darkTheme = {
+  background: "#333333",
+  listItemBackground: "#444",
+  textColor: "#fff",
+};
+
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
@@ -35,6 +41,8 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+    backgroundColor: darkTheme.background,
+    color: darkTheme.textColor,
   },
 }));
 
@@ -256,8 +264,8 @@ export default function ChatPopover() {
                 <ListItem
                   key={key}
                   style={{
-                    background: key % 2 === 0 ? "#ededed" : "white",
-                    border: "1px solid #eee",
+                    background: key % 2 === 0 ? darkTheme.listItemBackground : "white",
+                    border: `1px solid ${darkTheme.background}`,
                     cursor: "pointer",
                   }}
                   onClick={() => goToMessages(item)}

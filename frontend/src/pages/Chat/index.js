@@ -26,6 +26,13 @@ import { has, isObject } from "lodash";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import withWidth, { isWidthUp } from "@material-ui/core/withWidth";
 
+const darkTheme = {
+  background: "#333333",
+  paperBackground: "#444",
+  textColor: "#fff",
+  secondaryColor: "#aaa",
+};
+
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
     display: "flex",
@@ -35,13 +42,14 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(0),
     height: `calc(100% - 48px)`,
     overflowY: "hidden",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
+    border: `1px solid ${darkTheme.secondaryColor}`,
+    backgroundColor: darkTheme.background,
   },
   gridContainer: {
     flex: 1,
     height: "100%",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
-    backgroundColor: "#eee",
+    border: `1px solid ${darkTheme.secondaryColor}`,
+    backgroundColor: darkTheme.paperBackground,
   },
   gridItem: {
     height: "100%",
@@ -54,6 +62,23 @@ const useStyles = makeStyles((theme) => ({
     textAlign: "right",
     padding: 10,
   },
+  input: {
+    color: darkTheme.textColor,
+    "& .MuiInputLabel-root": {
+      color: darkTheme.secondaryColor,
+    },
+    "& .MuiOutlinedInput-root": {
+      "& fieldset": {
+        borderColor: darkTheme.secondaryColor,
+      },
+      "&:hover fieldset": {
+        borderColor: darkTheme.secondaryColor,
+      },
+      "&.Mui-focused fieldset": {
+        borderColor: darkTheme.secondaryColor,
+      },
+    },
+  },
 }));
 
 export function ChatModal({
@@ -63,6 +88,7 @@ export function ChatModal({
   handleClose,
   handleLoadNewChat,
 }) {
+  const classes = useStyles();
   const [users, setUsers] = useState([]);
   const [title, setTitle] = useState("");
 
@@ -116,6 +142,7 @@ export function ChatModal({
               variant="outlined"
               size="small"
               fullWidth
+              className={classes.input}
             />
           </Grid>
           <Grid xs={12} item>

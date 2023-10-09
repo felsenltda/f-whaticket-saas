@@ -19,6 +19,12 @@ import EditIcon from "@material-ui/icons/Edit";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import api from "../../services/api";
 
+const darkTheme = {
+  background: "#333333",
+  listItemBackground: "#444",
+  textColor: "#fff",
+};
+
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
     display: "flex",
@@ -28,7 +34,8 @@ const useStyles = makeStyles((theme) => ({
     height: "calc(100% - 58px)",
     overflow: "hidden",
     borderRadius: 0,
-    backgroundColor: "white",
+    backgroundColor: "#414141",
+    color: darkTheme.textColor,
   },
   chatList: {
     display: "flex",
@@ -40,6 +47,13 @@ const useStyles = makeStyles((theme) => ({
   },
   listItem: {
     cursor: "pointer",
+    backgroundColor: darkTheme.listItemBackground,
+    borderLeft: `6px solid ${darkTheme.listItemBackground}`,
+  },
+  listItemSelected: {
+    cursor: "pointer",
+    backgroundColor: "#333333",
+    borderLeft: "6px solid #002d6e",
   },
 }));
 
@@ -58,7 +72,6 @@ export default function ChatList({
 
   const [confirmationModal, setConfirmModalOpen] = useState(false);
   const [selectedChat, setSelectedChat] = useState({});
-
   const { id } = useParams();
 
   const goToMessages = async (chat) => {
@@ -109,7 +122,7 @@ export default function ChatList({
 
   const getItemStyle = (chat) => {
     return {
-      borderLeft: chat.uuid === id ? "6px solid #002d6e" : null,
+      borderLeft: chat.uuid === id ? `6px solid #002d6e` : null,
       backgroundColor: chat.uuid === id ? "#eee" : null,
     };
   };
@@ -133,8 +146,9 @@ export default function ChatList({
                 <ListItem
                   onClick={() => goToMessages(chat)}
                   key={key}
-                  className={classes.listItem}
-                  style={getItemStyle(chat)}
+                  className={
+                    chat.uuid === id ? classes.listItemSelected : classes.listItem
+                  }
                   button
                 >
                   <ListItemText

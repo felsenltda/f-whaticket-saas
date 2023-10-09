@@ -227,7 +227,7 @@ const LoggedInLayout = ({ children }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          <img src={logo} style={{ margin: "0 auto", height: "50px", width: "40%" }} alt="logo" />
+          <img src={logo} style={{ margin: "0 auto", height: "30px", width: "60%" }} alt="logo" />
           <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
             <ChevronLeftIcon />
           </IconButton>
