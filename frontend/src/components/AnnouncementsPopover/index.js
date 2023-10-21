@@ -38,7 +38,7 @@ const useStyles = makeStyles((theme) => ({
 
 function AnnouncementDialog({ announcement, open, handleClose }) {
   const getMediaPath = (filename) => {
-    return `${process.env.REACT_APP_BACKEND_URL}public/${filename}`;
+    return `${process.env.REACT_APP_BACKEND_URL}/public/${filename}`;
   };
   return (
     <Dialog
@@ -52,10 +52,10 @@ function AnnouncementDialog({ announcement, open, handleClose }) {
         {announcement.mediaPath && (
           <div
             style={{
-              border: "1px solid #f1f1f1",
+              /*border: "1px solid #f1f1f1",*/
               margin: "0 auto 20px",
               textAlign: "center",
-              width: "90%",
+              width: 550,
               height: 300,
               backgroundImage: `url(${getMediaPath(announcement.mediaPath)})`,
               backgroundRepeat: "no-repeat",
@@ -217,7 +217,7 @@ export default function AnnouncementsPopover() {
   };
 
   const getMediaPath = (filename) => {
-    return `${process.env.REACT_APP_BACKEND_URL}public/${filename}`;
+    return `${process.env.REACT_APP_BACKEND_URL}/public/${filename}`;
   };
 
   const handleShowAnnouncementDialog = (record) => {
@@ -278,7 +278,7 @@ export default function AnnouncementsPopover() {
                 <ListItem
                   key={key}
                   style={{
-                    background: key % 2 === 0 ? "#ededed" : "white",
+                    background: key % 2 === 0 ? "#0094bb" : "white",
                     border: "1px solid #eee",
                     borderLeft: borderPriority(item.priority),
                     cursor: "pointer",

@@ -7,7 +7,7 @@ import Skeleton from "@material-ui/lab/Skeleton";
 const useStyles = makeStyles(theme => ({
 	ticketHeader: {
 		display: "flex",
-		backgroundColor: "#eee",
+		background: theme.palette.total,
 		flex: "none",
 		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
 	},
@@ -27,7 +27,7 @@ const TicketHeaderSkeleton = () => {
 					</Skeleton>
 				}
 				title={<Skeleton animation="wave" width={80} />}
-				subheader={<Skeleton animation="wave" width={140}/>}
+				subheader={<Skeleton animation="wave" width={140} />}
 			/>
 		</Card>
 	);

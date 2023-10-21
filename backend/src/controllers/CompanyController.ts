@@ -11,6 +11,8 @@ import ShowCompanyService from "../services/CompanyService/ShowCompanyService";
 import UpdateSchedulesService from "../services/CompanyService/UpdateSchedulesService";
 import DeleteCompanyService from "../services/CompanyService/DeleteCompanyService";
 import FindAllCompaniesService from "../services/CompanyService/FindAllCompaniesService";
+import User from "../models/User";
+
 
 type IndexQuery = {
   searchParam: string;
@@ -32,6 +34,7 @@ type CompanyData = {
 type SchedulesData = {
   schedules: [];
 };
+
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber } = req.query as IndexQuery;

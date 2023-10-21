@@ -35,7 +35,7 @@ const useStyles = makeStyles(theme => ({
 
 	tabsHeader: {
 		flex: "none",
-		backgroundColor: "#eee",
+		background: theme.palette.total,
 	},
 
 	settingsIcon: {

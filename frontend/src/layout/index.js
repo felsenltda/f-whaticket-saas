@@ -27,11 +27,18 @@ import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
+import { useDate } from "../hooks/useDate";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
 
 import logo from "../assets/logo.png";
 import { socketConnection } from "../services/socket";
 import ChatPopover from "../pages/Chat/ChatPopover";
+import { system } from "../config.json";
+
+// DARK THEMA
+import ColorModeContext from "../layout/themeContext";
+import Brightness4Icon from '@material-ui/icons/Brightness4';
+import Brightness7Icon from '@material-ui/icons/Brightness7';
 
 const drawerWidth = 300;
 
@@ -42,19 +49,33 @@ const useStyles = makeStyles((theme) => ({
     [theme.breakpoints.down("sm")]: {
       height: "calc(100vh - 56px)",
     },
+    backgroundColor: theme.palette.fancyBackground,
+    '& .MuiButton-outlinedPrimary': {
+      color: theme.mode === 'light' ? '#007aff' : '#FFF',
+      border: theme.mode === 'light' ? '1px solid rgba(0 124 102)' : '1px solid rgba(255, 255, 255, 0.5)',
+    },
+    '& .MuiTab-textColorPrimary.Mui-selected': {
+      color: theme.mode === 'light' ? '#007aff' : '#FFF',
+    }
   },
 
   toolbar: {
     paddingRight: 24, // keep right padding when drawer closed
-    color: theme.palette.text.primary, // Cor do texto
-    background: theme.palette.background.default, // Cor de fundo
+    color: "white",
+    background: theme.palette.barraSuperior,
+
   },
+
   toolbarIcon: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     padding: "0 8px",
     minHeight: "48px",
+    background: theme.palette.barraSuperior,
+    [theme.breakpoints.down("sm")]: {
+      height: "48px"
+    }
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
@@ -82,7 +103,6 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 14,
   },
   drawerPaper: {
-    backgroundColor: theme.palette.background.paper, // Cor de fundo da barra lateral
     position: "relative",
     whiteSpace: "nowrap",
     width: drawerWidth,
@@ -108,7 +128,7 @@ const useStyles = makeStyles((theme) => ({
   content: {
     flex: 1,
     overflow: "auto",
-    ...theme.scrollbarStyles, // Estilos para a scrollbar
+    ...theme.scrollbarStyles,
   },
   container: {
     paddingTop: theme.spacing(4),
@@ -124,7 +144,7 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(1),
     overflowY: "scroll",
-    ...theme.scrollbarStyles, // Estilos para a scrollbar
+    ...theme.scrollbarStyles,
   },
 }));
 
@@ -137,8 +157,10 @@ const LoggedInLayout = ({ children }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   const { user } = useContext(AuthContext);
+  const { dateToClient } = useDate();
 
   const theme = useTheme();
+  const { colorMode } = useContext(ColorModeContext);
   const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
 
   useEffect(() => {
@@ -203,6 +225,10 @@ const LoggedInLayout = ({ children }) => {
     handleLogout();
   };
 
+  const toggleColorMode = () => {
+    colorMode.toggleColorMode();
+  }
+
   const drawerClose = () => {
     if (document.body.offsetWidth < 600) {
       setDrawerOpen(false);
@@ -227,8 +253,8 @@ const LoggedInLayout = ({ children }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          <img src={logo} style={{ margin: "0 auto", height: "30px", width: "60%" }} alt="logo" />
-          <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
+          <img src={logo} style={{ margin: "0 auto", height: "45%", width: "45%" }} alt="logo" />
+          <IconButton onClick={() => setDrawerOpen(!drawerOpen)} style={{ color: "white" }}>
             <ChevronLeftIcon />
           </IconButton>
         </div>
@@ -262,20 +288,28 @@ const LoggedInLayout = ({ children }) => {
             <MenuIcon />
           </IconButton>
           <Typography
-            component="h8"
-            variant="h8"
+            component="h1"
+            variant="h6"
             color="inherit"
             noWrap
             className={classes.title}
+            style={console.log('dueDate', user?.company?.dueDate)}
           >
-            {greaterThenSm ? (
+            {greaterThenSm && user?.profile === "admin" && user?.company?.dueDate ? (
               <>
-                Olá <b>{user.name}</b>, Seja bem-vindo.
+                Olá <b>{user.name}</b>, seja bem-vindo ao <b>{system.name}</b>! (Ativo até {dateToClient(user?.company?.dueDate)})
               </>
             ) : (
-              user.name
+              <>
+                Olá <b>{user.name}</b>, seja bem-vindo ao <b>{system.name}</b>!
+              </>
             )}
           </Typography>
+
+          <IconButton edge="start" onClick={toggleColorMode}>
+            {theme.mode === 'dark' ? <Brightness7Icon style={{ color: "white" }} /> : <Brightness4Icon style={{ color: "white" }} />}
+          </IconButton>
+
           {user.id && <NotificationsPopOver />}
 
           <AnnouncementsPopover />
@@ -289,6 +323,7 @@ const LoggedInLayout = ({ children }) => {
               aria-haspopup="true"
               onClick={handleMenu}
               variant="contained"
+              style={{ color: "white" }}
             >
               <AccountCircle />
             </IconButton>

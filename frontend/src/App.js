@@ -1,63 +1,96 @@
 import React, { useState, useEffect } from "react";
-import Routes from "./routes";
-import "react-toastify/dist/ReactToastify.css";
 
-import { createTheme, ThemeProvider } from "@material-ui/core/styles";
+import "react-toastify/dist/ReactToastify.css";
+import { QueryClient, QueryClientProvider } from "react-query";
+
 import { ptBR } from "@material-ui/core/locale";
+import { createTheme, ThemeProvider } from "@material-ui/core/styles";
+import { useMediaQuery } from "@material-ui/core";
+import ColorModeContext from "./layout/themeContext";
+
+import Routes from "./routes";
+
+const queryClient = new QueryClient();
 
 const App = () => {
-  const [locale, setLocale] = useState();
+    const [locale, setLocale] = useState();
 
-  const darkTheme = createTheme(
-    {
-      palette: {
-        type: "dark", // Definir o tipo de tema como escuro
-        primary: { main: "#446ffc" },
-        third: { main: "#d17308" }
-      },
-      scrollbarStyles: {
-        '&::-webkit-scrollbar': {
-          width: '8px',
-          height: '8px',
+    const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
+    const preferredTheme = window.localStorage.getItem("preferredTheme");
+    const [mode, setMode] = useState(preferredTheme ? preferredTheme : prefersDarkMode ? "dark" : "light");
+
+    const colorMode = React.useMemo(
+        () => ({
+            toggleColorMode: () => {
+                setMode((prevMode) => (prevMode === "light" ? "dark" : "light"));
+            },
+        }),
+        []
+    );
+
+    const theme = createTheme(
+        {
+            scrollbarStyles: {
+                "&::-webkit-scrollbar": {
+                    width: '8px',
+                    height: '8px',
+                },
+                "&::-webkit-scrollbar-thumb": {
+                    boxShadow: 'inset 0 0 6px rgba(0, 0, 0, 0.3)',
+                    backgroundColor: "#e8e8e8",
+                },
+            },
+            scrollbarStylesSoft: {
+                "&::-webkit-scrollbar": {
+                    width: "8px",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                    backgroundColor: mode === "light" ? "#F3F3F3" : "#333333",
+                },
+            },
+            palette: {
+                type: mode,
+                primary: { main: "#007aff" },
+                textPrimary: mode === "light" ? "#007aff" : "#FFFFFF",
+                borderPrimary: mode === "light" ? "#007aff" : "#FFFFFF",
+                dark: { main: mode === "light" ? "#333333" : "#F3F3F3" },
+                light: { main: mode === "light" ? "#F3F3F3" : "#333333" },
+                tabHeaderBackground: mode === "light" ? "#EEE" : "#666",
+                optionsBackground: mode === "light" ? "#fafafa" : "#333",
+                fancyBackground: mode === "light" ? "#fafafa" : "#333",
+                total: mode === "light" ? "#fff" : "#222",
+                messageIcons: mode === "light" ? "grey" : "#F3F3F3",
+                inputBackground: mode === "light" ? "#FFFFFF" : "#333",
+                barraSuperior: "#2d2d2d"
+            },
+            mode,
         },
-        '&::-webkit-scrollbar-thumb': {
-          boxShadow: 'inset 0 0 6px rgba(170, 0, 126, 126)',
-          backgroundColor: '#446ffc',
-        },
-      },
-      barraSuperior: {
-        primary: { main: "linear-gradient(to right, #446ffc 100%, #446ffc 26%, #446ffc 100%)" },
-        secondary: { main: "#000000" },
-      },
-      barraLateral: {
-        primary: { main: "#e3e5e8" },
-      },
-      icons: {
-        primary: { main: "#446ffc" }
-      },
-      textColorMenu: {
-        primary: { main: "#FFFFFF" },
-        secondary: { main: "#446ffc" }
-      },
-    },
-    locale
-  );
+        locale
+    );
 
-  useEffect(() => {
-    const i18nlocale = localStorage.getItem("i18nextLng");
-    const browserLocale =
-      i18nlocale.substring(0, 2) + i18nlocale.substring(3, 5);
+    useEffect(() => {
+        const i18nlocale = localStorage.getItem("i18nextLng");
+        const browserLocale =
+            i18nlocale.substring(0, 2) + i18nlocale.substring(3, 5);
 
-    if (browserLocale === "ptBR") {
-      setLocale(ptBR);
-    }
-  }, []);
+        if (browserLocale === "ptBR") {
+            setLocale(ptBR);
+        }
+    }, []);
 
-  return (
-    <ThemeProvider theme={darkTheme}>
-      <Routes />
-    </ThemeProvider>
-  );
+    useEffect(() => {
+        window.localStorage.setItem("preferredTheme", mode);
+    }, [mode]);
+
+    return (
+        <ColorModeContext.Provider value={{ colorMode }}>
+            <ThemeProvider theme={theme}>
+                <QueryClientProvider client={queryClient}>
+                    <Routes />
+                </QueryClientProvider>
+            </ThemeProvider>
+        </ColorModeContext.Provider>
+    );
 };
 
 export default App;

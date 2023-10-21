@@ -31,17 +31,12 @@ const useStyles = makeStyles((theme) => ({
     height: 240,
   },
   tab: {
-    background: "#f2f5f3",
+    backgroundColor: theme.mode === 'light' ? "#f2f2f2" : "#7f7f7f",
     borderRadius: 4,
-    width: "100%",
-    "& .MuiTab-wrapper": {
-      color: "#128c7e"
-    },
+    width: "100%",    
     "& .MuiTabs-flexContainer": {
       justifyContent: "center"
     }
-
-
   },
   paper: {
     padding: theme.spacing(2),
@@ -85,12 +80,15 @@ export default function Options(props) {
   const [callType, setCallType] = useState("enabled");
   const [chatbotType, setChatbotType] = useState("");
   const [CheckMsgIsGroup, setCheckMsgIsGroupType] = useState("enabled");
-
+  const [outsideMessageType, setOutsideMessageType] = useState("disabled");
   const [loadingUserRating, setLoadingUserRating] = useState(false);
   const [loadingScheduleType, setLoadingScheduleType] = useState(false);
   const [loadingCallType, setLoadingCallType] = useState(false);
   const [loadingChatbotType, setLoadingChatbotType] = useState(false);
   const [loadingCheckMsgIsGroup, setCheckMsgIsGroup] = useState(false);
+
+  const [loadingOutsideMessageType, setLoadingOutsideMessageType] = useState(false);
+  const [loadingOutsideQueueType, setLoadingOutsideQueueType] = useState(false);
 
 
   const [ipixcType, setIpIxcType] = useState("");
@@ -162,6 +160,13 @@ export default function Options(props) {
       if (asaasType) {
         setAsaasType(asaasType.value);
       }
+    
+      const outsideMessageType = settings.find((s) => s.key === "outsidemessage");
+      if (outsideMessageType) {
+        setOutsideMessageType(outsideMessageType.value);
+      }
+    
+    
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
@@ -269,6 +274,17 @@ export default function Options(props) {
     setLoadingIpMkauthType(false);
   }
 
+  async function handleOutsideMessageType(value) {
+    setOutsideMessageType(value);
+    setLoadingOutsideMessageType(true);
+    await update({
+      key: "outsidemessage",
+      value,
+    });
+    toast.success("Operação atualizada com sucesso.");
+    setLoadingOutsideMessageType(false);
+  }
+
   async function handleChangeClientIdMkauth(value) {
     setClientIdMkauthType(value);
     setLoadingClientIdMkauthType(true);
@@ -339,6 +355,7 @@ export default function Options(props) {
             >
               <MenuItem value={"disabled"}>Desabilitado</MenuItem>
               <MenuItem value={"queue"}>Gerenciamento Por Fila</MenuItem>
+              <MenuItem value={"company"}>Gerenciamento Por Empresa</MenuItem>
             </Select>
             <FormHelperText>
               {loadingScheduleType && "Atualizando..."}
@@ -398,14 +415,38 @@ export default function Options(props) {
               }}
             >
               <MenuItem value={"text"}>Texto</MenuItem>
-              <MenuItem value={"button"}>Botão</MenuItem>
-              <MenuItem value={"list"}>Lista</MenuItem>
+			 {/*<MenuItem value={"button"}>Botão</MenuItem>
+              <MenuItem value={"list"}>Lista</MenuItem>*/}
             </Select>
             <FormHelperText>
               {loadingChatbotType && "Atualizando..."}
             </FormHelperText>
           </FormControl>
         </Grid>
+		
+		<Grid xs={12} sm={6} md={4} item>
+          <FormControl className={classes.selectContainer}>
+            <InputLabel id="outsidemessage-type-label">
+              Abrir Tickets Fora do Expediente?
+            </InputLabel>
+            <Select
+              labelId="outsidemessage-type-label"
+              value={outsideMessageType}
+              onChange={async (e) => {
+                handleOutsideMessageType(e.target.value);
+              }}
+            >
+              <MenuItem value={"disabled"}>Não</MenuItem>
+              <MenuItem value={"enabled"}>Sim</MenuItem>
+            </Select>
+            <FormHelperText>
+              {loadingOutsideMessageType && "Atualizando..."}
+            </FormHelperText>
+          </FormControl>
+        </Grid>
+
+
+
       </Grid>
       <Grid spacing={3} container>
         <Tabs
@@ -426,6 +467,7 @@ export default function Options(props) {
         </Tabs>
 
       </Grid>
+
       {/*-----------------IXC-----------------*/}
       <Grid spacing={3} container
         style={{ marginBottom: 10 }}>
@@ -480,6 +522,7 @@ export default function Options(props) {
           </FormControl>
         </Grid>
       </Grid>
+
       {/*-----------------MK-AUTH-----------------*/}
       <Grid spacing={3} container
         style={{ marginBottom: 10 }}>
@@ -551,6 +594,7 @@ export default function Options(props) {
           </FormControl>
         </Grid>
       </Grid>
+
       {/*-----------------ASAAS-----------------*/}
       <Grid spacing={3} container
         style={{ marginBottom: 10 }}>
@@ -584,6 +628,7 @@ export default function Options(props) {
           </FormControl>
         </Grid>
       </Grid>
+
     </>
   );
 }

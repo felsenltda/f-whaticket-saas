@@ -57,7 +57,7 @@ export function TagsFilter({ onFiltered }) {
           <TextField
             {...params}
             variant="outlined"
-            placeholder="Filtro por Etiquetas"
+            placeholder="Filtro por Tags"
           />
         )}
       />

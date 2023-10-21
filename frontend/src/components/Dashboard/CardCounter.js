@@ -28,7 +28,7 @@ export default function CardCounter(props) {
     const { icon, title, value, loading } = props
 	const classes = useStyles();
     return ( !loading ? 
-        <Card className={classes.card}>
+        <Card>
             <CardHeader
                 avatar={
                     <Avatar className={classes.cardAvatar}>

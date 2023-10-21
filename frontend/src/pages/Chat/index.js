@@ -26,30 +26,22 @@ import { has, isObject } from "lodash";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import withWidth, { isWidthUp } from "@material-ui/core/withWidth";
 
-const darkTheme = {
-  background: "#333333",
-  paperBackground: "#444",
-  textColor: "#fff",
-  secondaryColor: "#aaa",
-};
-
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
     display: "flex",
     flexDirection: "column",
     position: "relative",
     flex: 1,
-    padding: theme.spacing(0),
+    padding: theme.spacing(2),
     height: `calc(100% - 48px)`,
     overflowY: "hidden",
-    border: `1px solid ${darkTheme.secondaryColor}`,
-    backgroundColor: darkTheme.background,
+    border: "1px solid rgba(0, 0, 0, 0.12)",
   },
   gridContainer: {
     flex: 1,
     height: "100%",
-    border: `1px solid ${darkTheme.secondaryColor}`,
-    backgroundColor: darkTheme.paperBackground,
+    border: "1px solid rgba(0, 0, 0, 0.12)",
+    background: theme.palette.total,
   },
   gridItem: {
     height: "100%",
@@ -62,23 +54,6 @@ const useStyles = makeStyles((theme) => ({
     textAlign: "right",
     padding: 10,
   },
-  input: {
-    color: darkTheme.textColor,
-    "& .MuiInputLabel-root": {
-      color: darkTheme.secondaryColor,
-    },
-    "& .MuiOutlinedInput-root": {
-      "& fieldset": {
-        borderColor: darkTheme.secondaryColor,
-      },
-      "&:hover fieldset": {
-        borderColor: darkTheme.secondaryColor,
-      },
-      "&.Mui-focused fieldset": {
-        borderColor: darkTheme.secondaryColor,
-      },
-    },
-  },
 }));
 
 export function ChatModal({
@@ -88,7 +63,6 @@ export function ChatModal({
   handleClose,
   handleLoadNewChat,
 }) {
-  const classes = useStyles();
   const [users, setUsers] = useState([]);
   const [title, setTitle] = useState("");
 
@@ -107,6 +81,16 @@ export function ChatModal({
 
   const handleSave = async () => {
     try {
+      if (!title) {
+        alert("Por favor, preencha o título da conversa.");
+        return;
+      }
+
+      if (!users || users.length === 0) {
+        alert("Por favor, selecione pelo menos um usuário.");
+        return;
+      }
+
       if (type === "edit") {
         await api.put(`/chats/${chat.id}`, {
           users,
@@ -121,7 +105,7 @@ export function ChatModal({
       }
       handleClose();
     } catch (err) {}
-  };
+  };  
 
   return (
     <Dialog
@@ -142,7 +126,6 @@ export function ChatModal({
               variant="outlined"
               size="small"
               fullWidth
-              className={classes.input}
             />
           </Grid>
           <Grid xs={12} item>

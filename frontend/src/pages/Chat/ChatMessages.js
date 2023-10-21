@@ -15,12 +15,6 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { useDate } from "../../hooks/useDate";
 import api from "../../services/api";
 
-const darkTheme = {
-  background: "#333333",
-  listItemBackground: "#444",
-  textColor: "#fff",
-};
-
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
     display: "flex",
@@ -31,15 +25,14 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 0,
     height: "100%",
     borderLeft: "1px solid rgba(0, 0, 0, 0.12)",
-    backgroundColor: darkTheme.background,
-    color: darkTheme.textColor,
+    // backgroundColor: theme.mode === 'light' ? "#f2f2f2" : "#7f7f7f",
   },
   messageList: {
     position: "relative",
     overflowY: "auto",
     height: "100%",
     ...theme.scrollbarStyles,
-    backgroundColor: darkTheme.listItemBackground,
+    background: theme.palette.total,
   },
   inputArea: {
     position: "relative",
@@ -47,8 +40,6 @@ const useStyles = makeStyles((theme) => ({
   },
   input: {
     padding: "20px",
-    backgroundColor: darkTheme.background,
-    color: darkTheme.textColor,
   },
   buttonSend: {
     margin: theme.spacing(1),
@@ -57,7 +48,8 @@ const useStyles = makeStyles((theme) => ({
     padding: "10px 10px 5px",
     margin: "10px",
     position: "relative",
-    backgroundColor: darkTheme.listItemBackground,
+    backgroundColor: "white",
+    color: "#7f7f7f",
     maxWidth: 300,
     borderRadius: 10,
     borderBottomLeftRadius: 0,
@@ -67,7 +59,8 @@ const useStyles = makeStyles((theme) => ({
     padding: "10px 10px 5px",
     margin: "10px 10px 10px auto",
     position: "relative",
-    backgroundColor: "#333333",
+    backgroundColor: "#72A0C1",
+    color: "#fafafa",
     textAlign: "right",
     maxWidth: 300,
     borderRadius: 10,

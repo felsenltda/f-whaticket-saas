@@ -51,7 +51,7 @@ const useStyles = makeStyles(theme => ({
 	messageInputWrapper: {
 		padding: 6,
 		marginRight: 7,
-		background: "#fff",
+		background: theme.palette.total,
 		display: "flex",
 		borderRadius: 20,
 		flex: 1,
@@ -77,7 +77,7 @@ const useStyles = makeStyles(theme => ({
 		position: "relative",
 		justifyContent: "space-between",
 		alignItems: "center",
-		backgroundColor: "#eee",
+		background: theme.palette.total,
 		borderTop: "1px solid rgba(0, 0, 0, 0.12)",
 	},
 

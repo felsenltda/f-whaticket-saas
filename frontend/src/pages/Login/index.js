@@ -1,60 +1,77 @@
 import React, { useState, useContext } from "react";
-import Button from "@material-ui/core/Button";
-import CssBaseline from "@material-ui/core/CssBaseline";
-import TextField from "@material-ui/core/TextField";
-import Typography from "@material-ui/core/Typography";
-import { makeStyles, createTheme, ThemeProvider } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-import { AuthContext } from "../../context/Auth/AuthContext";
-import logo from "../../assets/logo.png";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  Avatar,
+  Button,
+  CssBaseline,
+  TextField,
+  Grid,
+  Typography,
+  Container,
+  InputAdornment,
+  IconButton,
+  Link,
+  useTheme,
+} from "@material-ui/core";
 
-const theme = createTheme({
-  palette: {
-    type: "dark", // Tema escuro
-    primary: {
-      main: "#2196F3", // Cor primária (azul)
+import { makeStyles } from "@material-ui/core/styles";
+import { Visibility, VisibilityOff } from "@material-ui/icons";
+
+import { i18n } from "../../translate/i18n";
+
+import { AuthContext } from "../../context/Auth/AuthContext";
+import chatImageDark from "../../assets/logologindark.png";
+import chatImageLight from "../../assets/logologinwhite.png";
+
+const useStyles = makeStyles((theme) => {
+  const logoStyle = {
+    width: theme.palette.type === "dark" ? "45%" : "55%", // Manter 45% independente do tema
+  };
+
+  return {
+    root: {
+      width: "100vw",
+      height: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      textAlign: "center",
     },
-  },
+    paper: {
+      marginTop: theme.spacing(8),
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      textAlign: "center",
+      padding: theme.spacing(2),
+      borderRadius: theme.spacing(2),
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: "0px 3px 6px rgba(0, 0, 0, 0.16)",
+    },
+    avatar: {
+      margin: theme.spacing(1),
+      backgroundColor: theme.palette.secondary.main,
+    },
+    form: {
+      width: "100%",
+      marginTop: theme.spacing(1),
+    },
+    submit: {
+      margin: theme.spacing(3, 0, 2),
+    },
+    logo: {
+      ...logoStyle,
+    },
+  };
 });
 
-const useStyles = makeStyles((theme) => ({
-  paper: {
-    marginTop: theme.spacing(8),
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: theme.spacing(4), // Aumentando o espaçamento interno
-    borderRadius: "8px",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-  },
-  logo: {
-    maxWidth: "150px", // Limite de tamanho para o logo
-    marginBottom: "20px", // Espaçamento entre o logo e o texto
-  },
-  avatar: {
-    margin: theme.spacing(1),
-    backgroundColor: theme.palette.primary.main,
-  },
-  form: {
-    width: "100%",
-    marginTop: theme.spacing(1),
-  },
-  submit: {
-    margin: theme.spacing(3, 0, 2),
-  },
-  loginText: {
-    fontSize: "18px", // Redução do tamanho do texto "Faça login"
-  },
-  copyright: {
-    marginTop: "20px", // Espaçamento entre o texto de login e o copyright
-    textAlign: "center",
-  },
-}));
-
 const Login = () => {
+  const theme = useTheme();
   const classes = useStyles();
 
   const [user, setUser] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
 
   const { handleLogin } = useContext(AuthContext);
 
@@ -67,64 +84,91 @@ const Login = () => {
     handleLogin(user);
   };
 
-  const currentYear = new Date().getFullYear(); // Obtém o ano corrente
+  const chatImage = theme.palette.type === "dark" ? chatImageDark : chatImageLight;
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Container component="main" maxWidth="xs">
-        <div className={classes.paper}>
-          <img
-            className={classes.logo}
-            src={logo}
-            alt="Whats"
-          />
-          <Typography component="h1" variant="h5" className={classes.loginText}>
-            Faça login
-          </Typography>
-          <form className={classes.form} noValidate onSubmit={handleSubmit}>
-            <TextField
-              variant="outlined"
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email"
-              name="email"
-              value={user.email}
-              onChange={handleChangeInput}
-              autoComplete="email"
-              autoFocus
-            />
-            <TextField
-              variant="outlined"
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Senha"
-              type="password"
-              id="password"
-              value={user.password}
-              onChange={handleChangeInput}
-              autoComplete="current-password"
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              color="primary"
-              className={classes.submit}
-            >
-              Entrar
-            </Button>
-          </form>
-          <Typography variant="body2" color="textSecondary" className={classes.copyright}>
-            &copy; {currentYear} Wase Hub - Todos os direitos reservados
-          </Typography>
+    <div className={classes.root}>
+      <Container component="main" maxWidth="md">
+        <CssBaseline />
+        <div className={classes.containerWrapper}>
+          <Container
+            component="div"
+            maxWidth="xs"
+            className={classes.mobileContainer}
+          >
+            <div className={classes.paper}>
+              <div>
+                <img
+                  src={chatImage}
+                  className={classes.logo}
+                  alt={process.env.REACT_APP_TITLE}
+                />
+              </div>
+              <form className={classes.form} noValidate onSubmit={handleSubmit}>
+                <TextField
+                  variant="outlined"
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="email"
+                  label={i18n.t("login.form.email")}
+                  name="email"
+                  value={user.email}
+                  onChange={handleChangeInput}
+                  autoComplete="email"
+                  autoFocus
+                />
+                <TextField
+                  variant="outlined"
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="password"
+                  label={i18n.t("login.form.password")}
+                  id="password"
+                  value={user.password}
+                  onChange={handleChangeInput}
+                  autoComplete="current-password"
+                  type={showPassword ? "text" : "password"}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={() => setShowPassword((e) => !e)}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  color="primary"
+                  className={classes.submit}
+                >
+                  {i18n.t("login.buttons.submit")}
+                </Button>
+                <Grid container justifyContent="flex-end">
+                  <Grid item>
+                    <Link
+                      variant="body2"
+                      component={RouterLink}
+                      to="/signup"
+                    >
+                      {i18n.t("login.buttons.register")}
+                    </Link>
+                  </Grid>
+                </Grid>
+              </form>
+            </div>
+          </Container>
         </div>
       </Container>
-    </ThemeProvider>
+    </div>
   );
 };
 

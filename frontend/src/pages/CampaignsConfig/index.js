@@ -46,9 +46,9 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const initialSettings = {
-  messageInterval: 20,
-  longerIntervalAfter: 20,
-  greaterInterval: 60,
+  messageInterval: 60,
+  longerIntervalAfter: 60,
+  greaterInterval: 120,
   variables: [],
 };
 

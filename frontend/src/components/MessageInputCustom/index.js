@@ -33,11 +33,14 @@ import toastError from "../../errors/toastError";
 
 import useQuickMessages from "../../hooks/useQuickMessages";
 
+import Compressor from 'compressorjs';
+import LinearWithValueLabel from "./ProgressBarCustom";
+
 const Mp3Recorder = new MicRecorder({ bitRate: 128 });
 
 const useStyles = makeStyles((theme) => ({
   mainWrapper: {
-    background: "#333333",
+    background: "#eee",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -45,7 +48,7 @@ const useStyles = makeStyles((theme) => ({
   },
 
   newMessageBox: {
-    background: "#333333",
+    background: "#eee",
     width: "100%",
     display: "flex",
     padding: "7px",
@@ -55,7 +58,7 @@ const useStyles = makeStyles((theme) => ({
   messageInputWrapper: {
     padding: 6,
     marginRight: 7,
-    background: "#333333",
+    background: theme.palette.total,
     display: "flex",
     borderRadius: 20,
     flex: 1,
@@ -81,7 +84,7 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#eee",
+    background: theme.palette.total,
     borderTop: "1px solid rgba(0, 0, 0, 0.12)",
   },
 
@@ -459,6 +462,8 @@ const MessageInputCustom = (props) => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [percentLoading, setPercentLoading] = useState(0);
+
   const inputRef = useRef();
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
@@ -514,20 +519,78 @@ const MessageInputCustom = (props) => {
 
     const formData = new FormData();
     formData.append("fromMe", true);
-    medias.forEach((media) => {
-      formData.append("medias", media);
-      formData.append("body", media.name);
-    });
 
-    try {
-      await api.post(`/messages/${ticketId}`, formData);
-    } catch (err) {
-      toastError(err);
-    }
+    medias.forEach(async (media, idx) => {
 
-    setLoading(false);
-    setMedias([]);
-  };
+      const file = media;
+
+      if (!file) { return; }
+
+      if (media?.type.split('/')[0] == 'image') {
+        new Compressor(file, {
+          quality: 0.7,
+
+          async success(media) {
+            //const formData = new FormData();
+            // The third parameter is required for server
+            //formData.append('file', result, result.name);
+
+            formData.append("medias", media);
+            formData.append("body", media.name);
+
+          },
+          error(err) {
+            alert('erro')
+            console.log(err.message);
+          },
+
+        });
+      } else {
+        formData.append("medias", media);
+        formData.append("body", media.name);
+
+      }
+
+
+    },);
+
+    setTimeout(async()=> {
+
+      try {
+        await api.post(`/messages/${ticketId}`, formData, {
+          onUploadProgress: (event) => {
+            let progress = Math.round(
+              (event.loaded * 100) / event.total
+            );
+            setPercentLoading(progress);
+            console.log(
+              `A imagem  está ${progress}% carregada... `
+            );
+          },
+        })
+          .then((response) => {
+            setLoading(false)
+            setMedias([])
+            setPercentLoading(0);
+            console.log(
+              `A imagem á foi enviada para o servidor!`
+
+            );
+          })
+          .catch((err) => {
+            console.error(
+              `Houve um problema ao realizar o upload da imagem.`
+            );
+            console.log(err);
+          });
+      } catch (err) {
+        toastError(err);
+      }
+
+
+    },2000)
+
+  }
 
   const handleSendMessage = async () => {
     if (inputMessage.trim() === "") return;
@@ -648,7 +711,8 @@ const MessageInputCustom = (props) => {
 
         {loading ? (
           <div>
-            <CircularProgress className={classes.circleLoading} />
+            {/*<CircularProgress className={classes.circleLoading} />*/}
+            <LinearWithValueLabel progress={percentLoading} />
           </div>
         ) : (
           <span>

@@ -28,15 +28,6 @@ const messages = {
           register: "Não tem um conta? Cadastre-se!",
         },
       },
-	locationPreview: {
-        toView: "Visualizar",
-        download: "Baixar",
-        hello: "Diga ol� ao seu novo contato!"
-      },
-
-      vcardPreview: {
-        toTalk: "Conversar",
-      },
       companies: {
         title: "Cadastrar Empresa",
         form: {
@@ -176,8 +167,8 @@ const messages = {
       },
       queueModal: {
         title: {
-          add: "Adicionar setor",
-          edit: "Editar setor",
+          add: "Adicionar fila",
+          edit: "Editar fila",
         },
         form: {
           name: "Nome",
@@ -232,8 +223,10 @@ const messages = {
       },
       tagModal: {
         title: {
-          add: "Nova Etiqueta",
-          edit: "Editar Etiqueta",
+          add: "Nova Tag",
+          edit: "Editar Tag",
+          addKanban: "Nova Lane",
+          editKanban: "Editar Lane",
         },
         form: {
           name: "Nome",
@@ -244,7 +237,36 @@ const messages = {
           okEdit: "Salvar",
           cancel: "Cancelar",
         },
-        success: "Etiqueta salva com sucesso.",
+        success: "Tag salvo com sucesso.",
+        successKanban: "Lane salva com sucesso.",
+      },
+      kanban: {
+        title: "Kanban",
+        searchPlaceholder: "Pesquisa",
+        subMenus:{
+          list:"Painel",
+          tags:"Lanes"
+        }
+      },
+      tagsKanban: {
+        title: "Lanes",
+        laneDefault: "Em aberto",
+        confirmationModal: {
+          deleteTitle: "Você tem certeza que quer excluir esta Lane?",
+          deleteMessage: "Esta ação não pode ser revertida.",
+        },
+        table: {
+          name: "Nome",
+          color: "Cor",
+          tickets: "Tickets",
+          actions: "Ações",
+        },
+        buttons: {
+          add: "Nova Lane",
+        },
+        toasts: {
+          deleted: "Lane excluída com sucesso.",
+        },
       },
       chat: {
         noTicketMessage: "Selecione um ticket para começar a conversar.",
@@ -254,14 +276,14 @@ const messages = {
           titleUploadMsgDragDrop: "ARRASTE E SOLTE ARQUIVOS NO CAMPO ABAIXO",
           titleFileList: "Lista de arquivo(s)"
         },
-      },      
+      },
       ticketsManager: {
         buttons: {
           newTicket: "Novo",
         },
       },
       ticketsQueueSelect: {
-        placeholder: "Setores",
+        placeholder: "Filas",
       },
       tickets: {
         toasts: {
@@ -285,8 +307,8 @@ const messages = {
       transferTicketModal: {
         title: "Transferir Ticket",
         fieldLabel: "Digite para buscar usuários",
-        fieldQueueLabel: "Transferir para setor",
-        fieldQueuePlaceholder: "Selecione um setor",
+        fieldQueueLabel: "Transferir para fila",
+        fieldQueuePlaceholder: "Selecione uma fila",
         noOptions: "Nenhum usuário encontrado com esse nome",
         buttons: {
           ok: "Transferir",
@@ -294,15 +316,13 @@ const messages = {
         },
       },
       ticketsList: {
-        pendingHeader: "ChatBot",
+        pendingHeader: "Aguardando",
         assignedHeader: "Atendendo",
         noTicketsTitle: "Nada aqui!",
         noTicketsMessage:
           "Nenhum atendimento encontrado com esse status ou termo pesquisado",
         buttons: {
           accept: "Aceitar",
-          closed: "Finalizar",
-          reopen: "Reabrir"
         },
       },
       newTicketModal: {
@@ -319,10 +339,11 @@ const messages = {
           dashboard: "Dashboard",
           connections: "Conexões",
           tickets: "Atendimentos",
+          todolist: "Tarefas",
           quickMessages: "Respostas Rápidas",
           contacts: "Contatos",
-          queues: "Setores & Chatbot",
-          tags: "Etiquetas",
+          queues: "Filas & Chatbot",
+          tags: "Tags",
           administration: "Administração",
           users: "Usuários",
           settings: "Configurações",
@@ -333,6 +354,7 @@ const messages = {
           annoucements: "Informativos",
           chats: "Chat Interno",
           financeiro: "Financeiro",
+          kanban: "Kanban",
         },
         appBar: {
           user: {
@@ -541,7 +563,7 @@ const messages = {
         title: "Configurações de Campanhas",
       },
       queues: {
-        title: "Setores & Chatbot",
+        title: "Filas & Chatbot",
         table: {
           name: "Nome",
           color: "Cor",
@@ -549,16 +571,16 @@ const messages = {
           actions: "Ações",
         },
         buttons: {
-          add: "Adicionar setor",
+          add: "Adicionar fila",
         },
         confirmationModal: {
           deleteTitle: "Excluir",
           deleteMessage:
-            "Você tem certeza? Essa ação não pode ser revertida! Os atendimentos dese setor continuarão existindo, mas não terão mais nenhum setor  atribuída.",
+            "Você tem certeza? Essa ação não pode ser revertida! Os atendimentos dessa fila continuarão existindo, mas não terão mais nenhuma fila atribuída.",
         },
       },
       queueSelect: {
-        inputLabel: "Setores",
+        inputLabel: "Filas",
       },
       users: {
         title: "Usuários",
@@ -577,7 +599,7 @@ const messages = {
         confirmationModal: {
           deleteTitle: "Excluir",
           deleteMessage:
-            "Todos os dados do usuário serão perdidos. Os atendimento abertos deste usuário serão movidos para o setor.",
+            "Todos os dados do usuário serão perdidos. Os atendimento abertos deste usuário serão movidos para a fila.",
         },
       },
       helps: {
@@ -605,22 +627,22 @@ const messages = {
         },
       },
       tags: {
-        title: "Etiquetas",
+        title: "Tags",
         confirmationModal: {
-          deleteTitle: "Você tem certeza que quer excluir esta Etiqueta?",
+          deleteTitle: "Você tem certeza que quer excluir esta Tag?",
           deleteMessage: "Esta ação não pode ser revertida.",
         },
         table: {
           name: "Nome",
           color: "Cor",
-          tickets: "Registros Etiquetados",
+          tickets: "Registros Tagdos",
           actions: "Ações",
         },
         buttons: {
-          add: "Nova Etiqueta",
+          add: "Nova Tag",
         },
         toasts: {
-          deleted: "Etiqueta  excluída com sucesso.",
+          deleted: "Tag excluído com sucesso.",
         },
       },
       settings: {
@@ -728,7 +750,7 @@ const messages = {
         ERR_QUEUE_COLOR_ALREADY_EXISTS:
           "Esta cor já está em uso, escolha outra.",
         ERR_WAPP_GREETING_REQUIRED:
-          "A mensagem de saudação é obrigatório quando há mais de um setor.",
+          "A mensagem de saudação é obrigatório quando há mais de uma fila.",
       },
     },
   },

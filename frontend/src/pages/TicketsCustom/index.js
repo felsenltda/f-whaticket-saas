@@ -12,8 +12,8 @@ import { i18n } from "../../translate/i18n";
 const useStyles = makeStyles(theme => ({
 	chatContainer: {
 		flex: 1,
-		backgroundColor: "#333333",
-		//padding: theme.spacing(4),
+		// backgroundColor: "#eee",
+		padding: theme.spacing(4),
 		height: `calc(100% - 48px)`,
 		overflowY: "hidden",
 	},
@@ -36,7 +36,7 @@ const useStyles = makeStyles(theme => ({
 		flexDirection: "column",
 	},
 	welcomeMsg: {
-		backgroundColor: "#333333",
+		background: theme.palette.total,
 		display: "flex",
 		justifyContent: "space-evenly",
 		alignItems: "center",

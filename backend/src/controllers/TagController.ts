@@ -10,32 +10,37 @@ import ShowService from "../services/TagServices/ShowService";
 import DeleteService from "../services/TagServices/DeleteService";
 import SimpleListService from "../services/TagServices/SimpleListService";
 import SyncTagService from "../services/TagServices/SyncTagsService";
+import KanbanListService from "../services/TagServices/KanbanListService";
+
 
 type IndexQuery = {
   searchParam?: string;
   pageNumber?: string | number;
+  kanban?: number;
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { pageNumber, searchParam } = req.query as IndexQuery;
+  const { pageNumber, searchParam, kanban } = req.query as IndexQuery;
   const { companyId } = req.user;
 
   const { tags, count, hasMore } = await ListService({
     searchParam,
     pageNumber,
-    companyId
+    companyId,
+    kanban
   });
 
   return res.json({ tags, count, hasMore });
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { name, color } = req.body;
+  const { name, color, kanban } = req.body;
   const { companyId } = req.user;
 
   const tag = await CreateService({
     name,
     color,
+    kanban,
     companyId
   });
 
@@ -46,6 +51,14 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   });
 
   return res.status(200).json(tag);
+};
+
+export const kanban = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId } = req.user;
+
+  const tags = await KanbanListService({ companyId });
+
+  return res.json({lista:tags});
 };
 
 export const show = async (req: Request, res: Response): Promise<Response> => {

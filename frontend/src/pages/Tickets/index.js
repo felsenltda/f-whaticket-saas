@@ -36,7 +36,7 @@ const useStyles = makeStyles(theme => ({
 		flexDirection: "column",
 	},
 	welcomeMsg: {
-		backgroundColor: "#eee",
+		background: theme.palette.total,
 		display: "flex",
 		justifyContent: "space-evenly",
 		alignItems: "center",

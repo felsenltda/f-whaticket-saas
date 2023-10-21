@@ -18,10 +18,11 @@ import {
   BinaryNode,
   WAMessageStubType,
   WAMessageUpdate,
-} from "@whiskeysockets/baileys";
+  } from "@whiskeysockets/baileys";
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
 import Message from "../../models/Message";
+import bdTemp from "./Tmp"
 
 import { getIO } from "../../libs/socket";
 import CreateMessageService from "../MessageServices/CreateMessageService";
@@ -29,7 +30,6 @@ import { logger } from "../../utils/logger";
 import CreateOrUpdateContactService from "../ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
-import { debounce } from "../../helpers/Debounce";
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
 import formatBody from "../../helpers/Mustache";
 import { Store } from "../../libs/store";
@@ -47,17 +47,11 @@ import { Op } from "sequelize";
 import { campaignQueue, parseToMilliseconds, randomValue } from "../../queues";
 import User from "../../models/User";
 import Setting from "../../models/Setting";
-import Baileys from "../../models/Baileys";
-import { getWbot } from "../../libs/wbot";
-import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
-import { CreateOrUpdateBaileysChatService } from "../BaileysChatServices/CreateOrUpdateBaileysChatService";
-import { ShowBaileysChatService } from "../BaileysChatServices/ShowBaileysChatService";
-import Whatsapp from "../../models/Whatsapp";
+import { cacheLayer } from "../../libs/cache";
+import { provider } from "./providers";
+import { debounce } from "../../helpers/Debounce";
 
-const puppeteer = require('puppeteer');
 const fs = require('fs')
-const path = require('path');
-var axios = require('axios');
 
 type Session = WASocket & {
   id?: number;
@@ -79,7 +73,7 @@ interface IMessage {
   isLatest: boolean;
 }
 
-const isNumeric = (value: string) => /^-?\d+$/.test(value);
+export const isNumeric = (value: string) => /^-?\d+$/.test(value);
 
 const writeFileAsync = promisify(writeFile);
 
@@ -87,7 +81,7 @@ const getTypeMessage = (msg: proto.IWebMessageInfo): string => {
   return getContentType(msg.message);
 };
 
-function validaCpfCnpj(val) {
+export function validaCpfCnpj(val) {
   if (val.length == 11) {
     var cpf = val.trim();
 
@@ -210,11 +204,10 @@ function timeout(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function sleep(time) {
+export async function sleep(time) {
   await timeout(time);
 }
-
-const sendMessageImage = async (
+export const sendMessageImage = async (
   wbot: Session,
   contact,
   ticket: Ticket,
@@ -244,7 +237,7 @@ const sendMessageImage = async (
   verifyMessage(sentMessage, ticket, contact);
 };
 
-const sendMessageLink = async (
+export const sendMessageLink = async (
   wbot: Session,
   contact: Contact,
   ticket: Ticket,
@@ -272,7 +265,7 @@ const sendMessageLink = async (
   verifyMessage(sentMessage, ticket, contact);
 };
 
-function makeid(length) {
+export function makeid(length) {
   var result = '';
   var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   var charactersLength = characters.length;
@@ -284,33 +277,11 @@ function makeid(length) {
 
 
 const getBodyButton = (msg: proto.IWebMessageInfo): string => {
-  if (msg.key.fromMe && msg.message.buttonsMessage?.contentText) {
-    let bodyMessage = `*${msg?.message?.buttonsMessage?.contentText}*`;
+  if (msg.key.fromMe && msg?.message?.viewOnceMessage?.message?.buttonsMessage?.contentText) {
+    let bodyMessage = `*${msg?.message?.viewOnceMessage?.message?.buttonsMessage?.contentText}*`;
 
-    for (const buton of msg.message?.buttonsMessage?.buttons) {
+    for (const buton of msg.message?.viewOnceMessage?.message?.buttonsMessage?.buttons) {
       bodyMessage += `\n\n${buton.buttonText?.displayText}`;
-    }
-    return bodyMessage;
-  }
-
-  if (msg.key.fromMe && msg?.message?.viewOnceMessage?.message?.listMessage) {
-    let bodyMessage = `*${msg?.message?.viewOnceMessage?.message?.listMessage?.description}*`;
-    for (const buton of msg.message?.viewOnceMessage?.message?.listMessage?.sections) {
-      for (const rows of buton.rows) {
-        bodyMessage += `\n\n${rows.title}`;
-      }
-    }
-
-    return bodyMessage;
-  }
-};
-const getBodyList = (msg: proto.IWebMessageInfo): string => {
-  if (msg.key.fromMe && msg.message.listMessage?.description) {
-    let bodyMessage = `*${msg.message.listMessage?.description}*`;
-    for (const buton of msg.message.listMessage?.sections) {
-      for (const rows of buton.rows) {
-        bodyMessage += `\n\n${rows.title}`;
-      }
     }
     return bodyMessage;
   }
@@ -342,14 +313,14 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
     let type = getTypeMessage(msg);
 
     const types = {
-      conversation: msg.message.conversation,
-      imageMessage: msg.message.imageMessage?.caption,
+      conversation: msg?.message?.conversation,
+      imageMessage: msg.message?.imageMessage?.caption,
       videoMessage: msg.message.videoMessage?.caption,
       extendedTextMessage: msg.message.extendedTextMessage?.text,
       buttonsResponseMessage: msg.message.buttonsResponseMessage?.selectedButtonId,
       templateButtonReplyMessage: msg.message?.templateButtonReplyMessage?.selectedId,
       messageContextInfo: msg.message.buttonsResponseMessage?.selectedButtonId || msg.message.listResponseMessage?.title,
-      buttonsMessage: getBodyButton(msg) || msg.message.buttonsMessage?.contentText,
+      buttonsMessage: getBodyButton(msg) || msg.message.listResponseMessage?.singleSelectReply?.selectedRowId,
       viewOnceMessage: getBodyButton(msg) || msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId,
       stickerMessage: "sticker",
       contactMessage: msg.message?.contactMessage?.vcard,
@@ -363,24 +334,21 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
       liveLocationMessage: `Latitude: ${msg.message.liveLocationMessage?.degreesLatitude} - Longitude: ${msg.message.liveLocationMessage?.degreesLongitude}`,
       documentMessage: msg.message?.documentMessage?.title,
       audioMessage: "Áudio",
-      listMessage: getBodyList(msg) || msg.message.listResponseMessage?.title,
+      listMessage: getBodyButton(msg) || msg.message.listResponseMessage?.title,
       listResponseMessage: msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId,
       reactionMessage: msg.message.reactionMessage?.text || "reaction",
-      senderKeyDistributionMessage: msg.message.senderKeyDistributionMessage?.axolotlSenderKeyDistributionMessage,
-
     };
 
-    /* console.log(msg); */
     const objKey = Object.keys(types).find(key => key === type);
+
     if (!objKey) {
       logger.warn(`#### Nao achou o type 152: ${type}
-  ${JSON.stringify(msg)}`);
+${JSON.stringify(msg)}`);
       Sentry.setExtra("Mensagem", { BodyMsg: msg.message, msg, type });
       Sentry.captureException(
         new Error("Novo Tipo de Mensagem em getTypeMessage")
       );
     }
-
     return types[type];
   } catch (error) {
     Sentry.setExtra("Error getTypeMessage", { msg, BodyMsg: msg.message });
@@ -418,11 +386,11 @@ export const getQuotedMessageId = (msg: proto.IWebMessageInfo) => {
   return body?.contextInfo?.stanzaId;
 };
 
-export const getMeSocket = (wbot: Session): IMe => {
+const getMeSocket = (wbot: Session): IMe => {
   return {
     id: jidNormalizedUser((wbot as WASocket).user.id),
     name: (wbot as WASocket).user.name
-  };
+    };
 };
 
 const getSenderMessage = (
@@ -440,16 +408,15 @@ const getSenderMessage = (
 const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
   const isGroup = msg.key.remoteJid.includes("g.us");
   const rawNumber = msg.key.remoteJid.replace(/\D/g, "");
-
   return isGroup
     ? {
-        id: getSenderMessage(msg, wbot),
-        name: msg.pushName
-      }
+      id: getSenderMessage(msg, wbot),
+      name: msg.pushName
+    }
     : {
-        id: msg.key.remoteJid,
-        name: msg.key.fromMe ? rawNumber : msg.pushName
-      };
+      id: msg.key.remoteJid,
+      name: msg.key.fromMe ? rawNumber : msg.pushName
+    };
 };
 
 const downloadMedia = async (msg: proto.IWebMessageInfo) => {
@@ -537,7 +504,6 @@ const verifyContact = async (
   wbot: Session,
   companyId: number
 ): Promise<Contact> => {
-  
   let profilePicUrl: string;
   try {
     profilePicUrl = await wbot.profilePictureUrl(msgContact.id);
@@ -555,7 +521,8 @@ const verifyContact = async (
   };
 
 
-  const contact = CreateOrUpdateContactService(contactData); 
+
+  const contact = CreateOrUpdateContactService(contactData);
 
   return contact;
 };
@@ -666,7 +633,6 @@ export const verifyMessage = async (
   ticket: Ticket,
   contact: Contact
 ) => {
-  
   const io = getIO();
   const quotedMsg = await verifyQuotedMessage(msg);
   const body = getBodyMessage(msg);
@@ -675,7 +641,7 @@ export const verifyMessage = async (
     id: msg.key.id,
     ticketId: ticket.id,
     contactId: msg.key.fromMe ? undefined : contact.id,
-    body,
+    body: body,
     fromMe: msg.key.fromMe,
     mediaType: getTypeMessage(msg),
     read: msg.key.fromMe,
@@ -685,13 +651,12 @@ export const verifyMessage = async (
     participant: msg.key.participant,
     dataJson: JSON.stringify(msg)
   };
-  
+
   await ticket.update({
     lastMessage: body
   });
 
   await CreateMessageService({ messageData, companyId: ticket.companyId });
-
 
   if (!msg.key.fromMe && ticket.status === "closed") {
     await ticket.update({ status: "pending" });
@@ -749,7 +714,10 @@ const isValidMsg = (msg: proto.IWebMessageInfo): boolean => {
       msgType === "protocolMessage" ||
       msgType === "listResponseMessage" ||
       msgType === "listMessage" ||
-      msgType === "viewOnceMessage";
+      msgType === "viewOnceMessage" ||
+      msgType === "documentWithCaptionMessage";
+
+    console.log('tipo', ifType)
 
     if (!ifType) {
       logger.warn(`#### Nao achou o type em isValidMsg: ${msgType}
@@ -779,7 +747,10 @@ const verifyQueue = async (
   const { queues, greetingMessage } = await ShowWhatsAppService(
     wbot.id!,
     ticket.companyId
-  );
+  )
+
+
+
   if (queues.length === 1) {
     const firstQueue = head(queues);
     let chatbot = false;
@@ -883,7 +854,6 @@ const verifyQueue = async (
   };
 
   if (choosenQueue) {
-
     let chatbot = false;
     if (choosenQueue?.options) {
       chatbot = choosenQueue.options.length > 0;
@@ -959,7 +929,7 @@ const verifyQueue = async (
 };
 
 
-const verifyRating = (ticketTraking: TicketTraking) => {
+export const verifyRating = (ticketTraking: TicketTraking) => {
   if (
     ticketTraking &&
     ticketTraking.finishedAt === null &&
@@ -971,7 +941,7 @@ const verifyRating = (ticketTraking: TicketTraking) => {
   return false;
 };
 
-const handleRating = async (
+export const handleRating = async (
   msg: WAMessage,
   ticket: Ticket,
   ticketTraking: TicketTraking
@@ -979,8 +949,8 @@ const handleRating = async (
   const io = getIO();
   let rate: number | null = null;
 
-  if (msg.message?.conversation) {
-    rate = +msg.message?.conversation;
+  if (msg?.message?.conversation) {
+    rate = +msg.message?.conversation || null;
   }
 
   if (!Number.isNaN(rate) && Number.isInteger(rate) && !isNull(rate)) {
@@ -994,8 +964,8 @@ const handleRating = async (
     if (rate < 1) {
       finalRate = 1;
     }
-    if (rate > 3) {
-      finalRate = 3;
+    if (rate > 5) {
+      finalRate = 5;
     }
 
     await UserRating.create({
@@ -1014,6 +984,8 @@ const handleRating = async (
 
     await ticket.update({
       queueId: null,
+      chatbot: null,
+      queueOptionId: null,
       userId: null,
       status: "closed",
     });
@@ -1036,12 +1008,10 @@ const handleRating = async (
 
 };
 
-const handleChartbot = async (
-  ticket: Ticket,
-  msg: WAMessage,
-  wbot: Session,
-  dontReadTheFirstQuestion: boolean = false
-) => {
+const handleChartbot = async (ticket: Ticket, msg: WAMessage, wbot: Session, dontReadTheFirstQuestion: boolean = false) => {
+
+
+
   const queue = await Queue.findByPk(ticket.queueId, {
     include: [
       {
@@ -1050,11 +1020,14 @@ const handleChartbot = async (
         where: { parentId: null },
         order: [
           ["option", "ASC"],
-          ["createdAt", "ASC"]
-        ]
-      }
-    ]
+          ["createdAt", "ASC"],
+        ],
+      },
+    ],
   });
+
+
+
 
   const messageBody = getBodyMessage(msg);
 
@@ -1065,239 +1038,75 @@ const handleChartbot = async (
     return;
   }
 
-  const companyId = ticket.companyId;
+  // voltar para o menu anterior
+  if (!isNil(queue) && !isNil(ticket.queueOptionId) && messageBody == "#") {
+    const option = await QueueOption.findByPk(ticket.queueOptionId);
+    await ticket.update({ queueOptionId: option?.parentId });
 
-  const buttonActive = await Setting.findOne({
-    where: {
-      key: "chatBotType",
-      companyId
-    }
-  });
-
-  const botText = async () => {
-    if (!isNil(queue) && !isNil(ticket.queueOptionId) && messageBody == "#") {
-      // falar com atendente
-      await ticket.update({ queueOptionId: null, chatbot: false });
-      const sentMessage = await wbot.sendMessage(
-        `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-        {
-          text: "\u200eAguarde, você será atendido em instantes."
-        }
-      );
-  
-      verifyMessage(sentMessage, ticket, ticket.contact);
-      return;
-    } else if (!isNil(queue) && !isNil(ticket.queueOptionId) && messageBody == "0") {
-      // voltar para o menu anterior
-      const option = await QueueOption.findByPk(ticket.queueOptionId);
-      await ticket.update({ queueOptionId: option?.parentId });
-    } else if (!isNil(queue) && !isNil(ticket.queueOptionId)) {
-      // escolheu uma opção
-      const count = await QueueOption.count({
-        where: { parentId: ticket.queueOptionId }
-      });
-      let option: any = {};
-      if (count == 1) {
-        option = await QueueOption.findOne({
-          where: { parentId: ticket.queueOptionId }
-        });
-      } else {
-        option = await QueueOption.findOne({
-          where: {
-            option: messageBody || "",
-            parentId: ticket.queueOptionId
-          }
-        });
-      }
-      if (option) {
-        await ticket.update({ queueOptionId: option?.id });
-      }
-    } else if (!isNil(queue) && isNil(ticket.queueOptionId) && !dontReadTheFirstQuestion ) {
-      // não linha a primeira pergunta
-      const option = queue?.options.find(o => o.option == messageBody);
-      if (option) {
-        await ticket.update({ queueOptionId: option?.id });
-      }
-    }
-  
-    await ticket.reload();
-
-    if (!isNil(queue) && isNil(ticket.queueOptionId)) {
-      let body = "";
-      let options = "";
-      const queueOptions = await QueueOption.findAll({
-        where: { queueId: ticket.queueId, parentId: null },
-        order: [
-          ["option", "ASC"],
-          ["createdAt", "ASC"]
-        ]
-      });
-  
-      if (queue.greetingMessage) {
-        body = `${queue.greetingMessage}\n\n`;
-      }
-  
-      queueOptions.forEach((option, i) => {
-        if (queueOptions.length - 1 > i) {
-          options += `*[ ${option.option} ]* - ${option.title}\n`;
-        } else {
-          options += `*[ ${option.option} ]* - ${option.title}`;
-        }
-      });
-  
-      if (options !== "") {
-        body += options;
-      }
-  
-      body += "\n\n*[ # ]* - *Menu Inicial*";
-  
-      const textMessage = {
-        text: formatBody(`\u200e${body}`, ticket.contact),
-      };
-      const sendMsg = await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,textMessage
-      );
-  
-      await verifyMessage(sendMsg, ticket, ticket.contact);
-    } else if (!isNil(queue) && !isNil(ticket.queueOptionId)) {
-      const currentOption = await QueueOption.findByPk(ticket.queueOptionId);
-      const queueOptions = await QueueOption.findAll({
+    // escolheu uma opção
+  } else if (!isNil(queue) && !isNil(ticket.queueOptionId)) {
+    const count = await QueueOption.count({
+      where: { parentId: ticket.queueOptionId },
+    });
+    let option: any = {};
+    if (count == 1) {
+      option = await QueueOption.findOne({
         where: { parentId: ticket.queueOptionId },
-        order: [
-          ["option", "ASC"],
-          ["createdAt", "ASC"]
-        ]
       });
-      let body = "";
-      let options = "";
-      let initialMessage = "";
-      let aditionalOptions = "\n";
-  
-      if (queueOptions.length > 1) {
-        if (!isNil(currentOption?.message) && currentOption?.message !== "") {
-          initialMessage = `${currentOption?.message}\n\n`;
-          body += initialMessage;
-        }
-  
-        if (queueOptions.length == 0) {
-          aditionalOptions = `*#* - *Falar com o atendente*\n`;
-        }
-  
-        queueOptions.forEach(option => {
-          options += `*[ ${option.option} ]* - ${option.title}\n`;
-        });
-  
-        if (options !== "") {
-          body += options;
-        }
-  
-        aditionalOptions += "*[ 0 ]* - *Voltar*\n";
-        aditionalOptions += "*[ # ]* - *Menu inicial*";
-  
-        body += aditionalOptions;
-      } else {
-        const firstOption = head(queueOptions);
-        if (firstOption) {
-          body = `${firstOption?.title}`;
-          if (firstOption?.message) {
-            body += `\n\n${firstOption.message}`;
-          }
-        } else {
-
-          body += `*[ 0 ]* - *Voltar*\n`;
-          body += `*[ # ]* - *Menu inicial*`;
-        }
-      }
-  
-      const textMessage = {
-        text: formatBody(`\u200e${body}`, ticket.contact),
-      };
-      
-      const sendMsg = await wbot.sendMessage(
-        `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-        textMessage
-      );
-      
-      await verifyMessage(sendMsg, ticket, ticket.contact);
-    }   
-
-  };
-
-  const botList = async () => {
-    if (!isNil(queue) && !isNil(ticket.queueOptionId) && messageBody == "#") {
-      // falar com atendente
-      await ticket.update({ queueOptionId: null, chatbot: false });
-      const sentMessage = await wbot.sendMessage(
-        `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-        {
-          text: "\u200eAguarde, você será atendido em instantes."
-        }
-      );
-  
-      verifyMessage(sentMessage, ticket, ticket.contact);
-      return;
-    } else if (!isNil(queue) && !isNil(ticket.queueOptionId) && messageBody == "0") {
-      // voltar para o menu anterior
-      const option = await QueueOption.findByPk(ticket.queueOptionId);
-      await ticket.update({ queueOptionId: option?.parentId });
-    } else if (!isNil(queue) && !isNil(ticket.queueOptionId)) {
-      // escolheu uma opção
-      const count = await QueueOption.count({
-        where: { parentId: ticket.queueOptionId }
+    } else {
+      option = await QueueOption.findOne({
+        where: {
+          option: messageBody || "",
+          parentId: ticket.queueOptionId,
+        },
       });
-      let option: any = {};
-      if (count == 1) {
-        option = await QueueOption.findOne({
-          where: { parentId: ticket.queueOptionId }
-        });
-      } else {
-        option = await QueueOption.findOne({
-          where: {
-            option: messageBody || "",
-            parentId: ticket.queueOptionId
-          }
-        });
-      }
-      if (option) {
-        await ticket.update({ queueOptionId: option?.id });
-      }
-    } else if (!isNil(queue) && isNil(ticket.queueOptionId) && !dontReadTheFirstQuestion ) {
-      // não linha a primeira pergunta
-      const option = queue?.options.find(o => o.option == messageBody);
-      if (option) {
-        await ticket.update({ queueOptionId: option?.id });
-      }
     }
-  
-    await ticket.reload();
+    if (option) {
+      await ticket.update({ queueOptionId: option?.id });
+    }
 
-    if (!isNil(queue) && isNil(ticket.queueOptionId)) {
-      const sectionsRows = [];
-      let body = "";
-      let options = "";
-      const queueOptions = await QueueOption.findAll({
-        where: { queueId: ticket.queueId, parentId: null },
-        order: [
-          ["option", "ASC"],
-          ["createdAt", "ASC"]
-        ]
-      });
-  
-      if (queue.greetingMessage) {
-        body = `${queue.greetingMessage}\n\n`;
+    // não linha a primeira pergunta
+  } else if (!isNil(queue) && isNil(ticket.queueOptionId) && !dontReadTheFirstQuestion) {
+    const option = queue?.options.find((o) => o.option == messageBody);
+    if (option) {
+      await ticket.update({ queueOptionId: option?.id });
+    }
+  }
+
+  await ticket.reload();
+
+  if (!isNil(queue) && isNil(ticket.queueOptionId)) {
+
+    const queueOptions = await QueueOption.findAll({
+      where: { queueId: ticket.queueId, parentId: null },
+      order: [
+        ["option", "ASC"],
+        ["createdAt", "ASC"],
+      ],
+    });
+
+    const companyId = ticket.companyId;
+
+    const buttonActive = await Setting.findOne({
+      where: {
+        key: "chatBotType",
+        companyId
       }
-  
+    });
+
+    const botList = async () => {
+      const sectionsRows = [];
+
       queueOptions.forEach((option, i) => {
         sectionsRows.push({
           title: option.title,
           rowId: `${option.option}`
         });
       });
-  
       sectionsRows.push({
         title: "Voltar Menu Inicial",
         rowId: `#`
       });
-  
       const sections = [
         {
           rows: sectionsRows
@@ -1316,164 +1125,10 @@ const handleChartbot = async (
       );
 
       await verifyMessage(sendMsg, ticket, ticket.contact);
-    } else if (!isNil(queue) && !isNil(ticket.queueOptionId)) {
-      const currentOption = await QueueOption.findByPk(ticket.queueOptionId);
-      const queueOptions = await QueueOption.findAll({
-        where: { parentId: ticket.queueOptionId },
-        order: [
-          ["option", "ASC"],
-          ["createdAt", "ASC"]
-        ]
-      });
-      let sectionsRows = [];
-      let body = "";
-      let initialMessage = "";
-  
-      if (queueOptions.length > 1) {
-        if (!isNil(currentOption?.message) && currentOption?.message !== "") {
-          initialMessage = `${currentOption?.message}`;
-          body += initialMessage;
-        }
-  
-        if (queueOptions.length == 0) {
-          sectionsRows.push({
-            title: "Voltar Menu Inicial",
-            rowId: `#`
-          });
-        }
-  
-        queueOptions.forEach(option => {
-          sectionsRows.push({
-            title: option.title,
-            rowId: `${option.option}`
-          });
-        });
-  
-        /* if (options !== "") {
-          body += options;
-        } */
-  
-        sectionsRows.push({
-          title: "Voltar",
-          rowId: `0`
-        });
-        sectionsRows.push({
-          title: "Menu Inicial",
-          rowId: `#`
-        });
-
-  
-        //body += aditionalOptions;
-      } else {
-        const firstOption = head(queueOptions);
-        if (firstOption) {
-          body = `${firstOption?.title}`;
-          if (firstOption?.message) {
-            body += `\n\n${firstOption.message}`;
-          }
-          sectionsRows.push({
-            title: "Voltar",
-            rowId: `0`
-          });
-          sectionsRows.push({
-            title: "Menu Inicial",
-            rowId: `#`
-          });
-        } else {
-          sectionsRows.push({
-            title: "Voltar",
-            rowId: `0`
-          });
-          sectionsRows.push({
-            title: "Menu Inicial",
-            rowId: `#`
-          });
-        }
-      }
-      const sections = [
-        {
-          rows: sectionsRows
-        }
-      ];
-      const listMessage = {
-        text: formatBody(`\u200e${body}`, ticket.contact),
-        buttonText: "Escolha uma opção",
-        sections
-      };
-
-      const sendMsg = await wbot.sendMessage(
-        `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-        listMessage
-      );
-
-      await verifyMessage(sendMsg, ticket, ticket.contact);
-    }   
-  };
-
-  const botButton = async () => {
-    if (!isNil(queue) && !isNil(ticket.queueOptionId) && messageBody == "#") {
-      // falar com atendente
-      await ticket.update({ queueOptionId: null, chatbot: false });
-      const sentMessage = await wbot.sendMessage(
-        `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-        {
-          text: "\u200eAguarde, você será atendido em instantes."
-        }
-      );
-  
-      verifyMessage(sentMessage, ticket, ticket.contact);
-      return;
-    } else if (!isNil(queue) && !isNil(ticket.queueOptionId) && messageBody == "0") {
-      // voltar para o menu anterior
-      const option = await QueueOption.findByPk(ticket.queueOptionId);
-      await ticket.update({ queueOptionId: option?.parentId });
-    } else if (!isNil(queue) && !isNil(ticket.queueOptionId)) {
-      // escolheu uma opção
-      const count = await QueueOption.count({
-        where: { parentId: ticket.queueOptionId }
-      });
-      let option: any = {};
-      if (count == 1) {
-        option = await QueueOption.findOne({
-          where: { parentId: ticket.queueOptionId }
-        });
-      } else {
-        option = await QueueOption.findOne({
-          where: {
-            option: messageBody || "",
-            parentId: ticket.queueOptionId
-          }
-        });
-      }
-      if (option) {
-        await ticket.update({ queueOptionId: option?.id });
-      }
-    } else if (!isNil(queue) && isNil(ticket.queueOptionId) && !dontReadTheFirstQuestion ) {
-      // não linha a primeira pergunta
-      const option = queue?.options.find(o => o.option == messageBody);
-      if (option) {
-        await ticket.update({ queueOptionId: option?.id });
-      }
     }
-  
-    await ticket.reload();
 
-    if (!isNil(queue) && isNil(ticket.queueOptionId)) {
+    const botButton = async () => {
       const buttons = [];
-      let body = "";
-      let options = "";
-      const queueOptions = await QueueOption.findAll({
-        where: { queueId: ticket.queueId, parentId: null },
-        order: [
-          ["option", "ASC"],
-          ["createdAt", "ASC"]
-        ]
-      });
-  
-      if (queue.greetingMessage) {
-        body = `${queue.greetingMessage}\n\n`;
-      }
-  
       queueOptions.forEach((option, i) => {
         buttons.push({
           buttonId: `${option.option}`,
@@ -1481,7 +1136,6 @@ const handleChartbot = async (
           type: 4
         });
       });
-  
       buttons.push({
         buttonId: `#`,
         buttonText: { displayText: "Voltar Menu Inicial" },
@@ -1500,50 +1154,133 @@ const handleChartbot = async (
       );
 
       await verifyMessage(sendMsg, ticket, ticket.contact);
-    } else if (!isNil(queue) && !isNil(ticket.queueOptionId)) {
-      const currentOption = await QueueOption.findByPk(ticket.queueOptionId);
-      const queueOptions = await QueueOption.findAll({
-        where: { parentId: ticket.queueOptionId },
-        order: [
-          ["option", "ASC"],
-          ["createdAt", "ASC"]
-        ]
+    }
+
+    const botText = async () => {
+      let options = "";
+
+      queueOptions.forEach((option, i) => {
+        options += `*[ ${option.option} ]* - ${option.title}\n`;
       });
-      const buttons = [];
-      let sectionsRows = [];
-      let body = "";
-      let initialMessage = "";
-  
-      if (queueOptions.length > 1) {
-        if (!isNil(currentOption?.message) && currentOption?.message !== "") {
-          initialMessage = `${currentOption?.message}`;
-          body += initialMessage;
+      options += `\n*[ # ]* - Voltar Menu Inicial`;
+
+      const textMessage = {
+        text: formatBody(`\u200e${queue.greetingMessage}\n\n${options}`, ticket.contact),
+      };
+
+      const sendMsg = await wbot.sendMessage(
+        `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+        textMessage
+      );
+
+      await verifyMessage(sendMsg, ticket, ticket.contact);
+    };
+
+    if (buttonActive.value === "list") {
+      return botList();
+    };
+
+    if (buttonActive.value === "button" && QueueOption.length <= 4) {
+      return botButton();
+    }
+
+    if (buttonActive.value === "text") {
+      return botText();
+    }
+
+    if (buttonActive.value === "button" && QueueOption.length > 4) {
+      return botText();
+    }
+  } else if (!isNil(queue) && !isNil(ticket.queueOptionId)) {
+    const currentOption = await QueueOption.findByPk(ticket.queueOptionId);
+    const queueOptions = await QueueOption.findAll({
+      where: { parentId: ticket.queueOptionId },
+      order: [
+        ["option", "ASC"],
+        ["createdAt", "ASC"],
+      ],
+    });
+
+
+    if (queueOptions.length == 0) {
+      const textMessage = {
+        text: formatBody(`${currentOption.message}`, ticket.contact),
+      };
+
+      const lastMessageFromMe = await Message.findOne({
+        where: {
+          ticketId: ticket.id,
+          fromMe: true,
+          body: textMessage.text
+        },
+        order: [["createdAt", "DESC"]]
+      });
+
+      if (lastMessageFromMe) {
+        return;
+      }
+
+      const sendMsg = await wbot.sendMessage(
+        `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+        textMessage
+      );
+
+      await verifyMessage(sendMsg, ticket, ticket.contact);
+
+      return
+    }
+
+    if (queueOptions.length > 1) {
+
+      const companyId = ticket.companyId;
+      const buttonActive = await Setting.findOne({
+        where: {
+          key: "chatBotType",
+          companyId
         }
-  
-        if (queueOptions.length == 0) {
-          buttons.push({
-            buttonId: `#`,
-            buttonText: { displayText: "Voltar Menu Inicial" },
-            type: 4
+      });
+
+      const botList = async () => {
+        const sectionsRows = [];
+
+        queueOptions.forEach((option, i) => {
+          sectionsRows.push({
+            title: option.title,
+            rowId: `${option.option}`
           });
-        }
-  
-        queueOptions.forEach(option => {
+        });
+        sectionsRows.push({
+          title: "Voltar Menu Inicial",
+          rowId: `#`
+        });
+        const sections = [
+          {
+            rows: sectionsRows
+          }
+        ];
+
+        const listMessage = {
+          text: formatBody(`\u200e${currentOption.message}`, ticket.contact),
+          buttonText: "Escolha uma opção",
+          sections
+        };
+
+        const sendMsg = await wbot.sendMessage(
+          `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+          listMessage
+        );
+
+        await verifyMessage(sendMsg, ticket, ticket.contact);
+      }
+
+      const botButton = async () => {
+        const buttons = [];
+        queueOptions.forEach((option, i) => {
           buttons.push({
             buttonId: `${option.option}`,
             buttonText: { displayText: option.title },
             type: 4
           });
-        });
-  
-        /* if (options !== "") {
-          body += options;
-        } */
-  
-        buttons.push({
-          buttonId: `0`,
-          buttonText: { displayText: "Voltar" },
-          type: 4
         });
         buttons.push({
           buttonId: `#`,
@@ -1551,210 +1288,65 @@ const handleChartbot = async (
           type: 4
         });
 
-  
-        //body += aditionalOptions;
-      } else {
-        const firstOption = head(queueOptions);
-        if (firstOption) {
-          body = `${firstOption?.title}`;
-          if (firstOption?.message) {
-            body += `\n\n${firstOption.message}`;
-          }
-          buttons.push({
-            buttonId: `0`,
-            buttonText: { displayText: "Voltar" },
-            type: 4
-          });
-          buttons.push({
-            buttonId: `#`,
-            buttonText: { displayText: "Voltar Menu Inicial" },
-            type: 4
-          });
-        } else {
-          buttons.push({
-            buttonId: `0`,
-            buttonText: { displayText: "Voltar" },
-            type: 4
-          });
-          buttons.push({
-            buttonId: `#`,
-            buttonText: { displayText: "Voltar Menu Inicial" },
-            type: 4
-          });
-        }
+        const buttonMessage = {
+          text: formatBody(`\u200e${currentOption.message}`, ticket.contact),
+          buttons,
+          headerType: 4
+        };
+
+        const sendMsg = await wbot.sendMessage(
+          `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+          buttonMessage
+        );
+
+        await verifyMessage(sendMsg, ticket, ticket.contact);
       }
-      const sections = [
-        {
-          rows: sectionsRows
-        }
-      ];
-      const buttonMessage = {
-        text: formatBody(`\u200e${body}`, ticket.contact),
-        buttons,
-        headerType: 4
+
+      const botText = async () => {
+
+        let options = "";
+
+        queueOptions.forEach((option, i) => {
+          options += `*[ ${option.option} ]* - ${option.title}\n`;
+        });
+        options += `\n*[ # ]* - Voltar Menu Inicial`;
+
+        const textMessage = {
+          text: formatBody(`\u200e${currentOption.message}\n\n${options}`, ticket.contact),
+        };
+
+        const sendMsg = await wbot.sendMessage(
+          `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+          textMessage
+        );
+
+        await verifyMessage(sendMsg, ticket, ticket.contact);
       };
 
-      const sendMsg = await wbot.sendMessage(
-        `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-        buttonMessage
-      );
+      if (buttonActive.value === "list") {
+        return botList();
+      };
 
-      await verifyMessage(sendMsg, ticket, ticket.contact);
-    }   
-  };
-
-
-  if (buttonActive.value === "list") {
-    return botList();
-  };
-
-  if (buttonActive.value === "button" && QueueOption.length <= 4) {
-    return botButton();
-  }
-
-  if (buttonActive.value === "text") {
-    return botText();
-  }
-
-  if (buttonActive.value === "button" && QueueOption.length > 4) {
-    return botText();
-  }
-
-  if (!isNil(queue) && isNil(ticket.queueOptionId)) {
-    let body = "";
-    let options = "";
-    const queueOptions = await QueueOption.findAll({
-      where: { queueId: ticket.queueId, parentId: null },
-      order: [
-        ["option", "ASC"],
-        ["createdAt", "ASC"]
-      ]
-    });
-
-    if (queue.greetingMessage) {
-      body = `${queue.greetingMessage}\n\n`;
-    }
-
-    queueOptions.forEach((option, i) => {
-      if (queueOptions.length - 1 > i) {
-        options += `*${option.option}* - ${option.title}\n`;
-      } else {
-        options += `*${option.option}* - ${option.title}`;
-      }
-    });
-
-    if (options !== "") {
-      body += options;
-    }
-
-    body += "\n\n*#* - *Menu inicial*";
-
-    const debouncedSentMessage = debounce(
-      async () => {
-        const sentMessage = await wbot.sendMessage(
-          `${ticket.contact.number}@${
-            ticket.isGroup ? "g.us" : "s.whatsapp.net"
-          }`,
-          {
-            text: body
-          }
-        );
-        verifyMessage(sentMessage, ticket, ticket.contact);
-      },
-      3000,
-      ticket.id
-    );
-
-    debouncedSentMessage();
-  } else if (!isNil(queue) && !isNil(ticket.queueOptionId)) {
-    const currentOption = await QueueOption.findByPk(ticket.queueOptionId);
-    const queueOptions = await QueueOption.findAll({
-      where: { parentId: ticket.queueOptionId },
-      order: [
-        ["option", "ASC"],
-        ["createdAt", "ASC"]
-      ]
-    });
-    let body = "";
-    let options = "";
-    let initialMessage = "";
-    let aditionalOptions = "\n";
-
-    if (queueOptions.length > 1) {
-      if (!isNil(currentOption?.message) && currentOption?.message !== "") {
-        initialMessage = `${currentOption?.message}\n\n`;
-        body += initialMessage;
+      if (buttonActive.value === "button" && QueueOption.length <= 4) {
+        return botButton();
       }
 
-      if (queueOptions.length == 0) {
-        aditionalOptions = `*#* - *Falar com o atendente*\n`;
+      if (buttonActive.value === "text") {
+        return botText();
       }
 
-      queueOptions.forEach(option => {
-        options += `*${option.option}* - ${option.title}\n`;
-      });
-
-      if (options !== "") {
-        body += options;
-      }
-
-      aditionalOptions += "*0* - *Voltar*\n";
-      aditionalOptions += "*#* - *Menu inicial*";
-
-      body += aditionalOptions;
-    } else {
-      const firstOption = head(queueOptions);
-      if (firstOption) {
-        body = `${firstOption?.title}`;
-        if (firstOption?.message) {
-          body += `\n\n${firstOption.message}`;
-        }
-      } else {
-        body = `*#* - *Falar com o atendente*\n\n`;
-        body += `*0* - *Voltar*\n`;
-        body += `*#* - *Menu inicial*`;
+      if (buttonActive.value === "button" && QueueOption.length > 4) {
+        return botText();
       }
     }
-
-    const debouncedSentMessage = debounce(
-      async () => {
-        const sentMessage = await wbot.sendMessage(
-          `${ticket.contact.number}@${
-            ticket.isGroup ? "g.us" : "s.whatsapp.net"
-          }`,
-          {
-            text: body
-          }
-        );
-        verifyMessage(sentMessage, ticket, ticket.contact);
-      },
-      3000,
-      ticket.id
-    );
-
-    debouncedSentMessage();
   }
-};
-
-const getChat = async (whatsapp: Whatsapp, msg: proto.IWebMessageInfo) => {
-  try {
-    const countMessageUnread = await ShowBaileysChatService(
-      whatsapp.id!,
-      msg.key.remoteJid
-    );
-
-    return countMessageUnread.unreadCount;
-  } catch (error) {
-    return 0;
-  }
-};
+}
 
 const handleMessage = async (
   msg: proto.IWebMessageInfo,
   wbot: Session,
   companyId: number
 ): Promise<void> => {
-
   if (!isValidMsg(msg)) return;
   try {
     let msgContact: IMe;
@@ -1769,15 +1361,31 @@ const handleMessage = async (
       },
     });
 
-    const bodyMessage = getBodyMessage(msg);
+    const bodyMessage = await getBodyMessage(msg);
     const msgType = getTypeMessage(msg);
 
+    if (msgType === "protocolMessage") return; // Tratar isso no futuro para excluir msgs se vor REVOKE
     const hasMedia =
       msg.message?.audioMessage ||
       msg.message?.imageMessage ||
       msg.message?.videoMessage ||
       msg.message?.documentMessage ||
-      msg.message.stickerMessage;
+      msg.message.stickerMessage ||
+      msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage ||
+      msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage ||
+      msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage ||
+      msg?.message?.ephemeralMessage?.message?.imageMessage ||
+      msg?.message?.ephemeralMessage?.message?.audioMessage ||
+      msg?.message?.ephemeralMessage?.message?.videoMessage ||
+      msg?.message?.ephemeralMessage?.message?.documentMessage ||
+      msg?.message?.ephemeralMessage?.message?.stickerMessage ||
+      msg.message?.viewOnceMessage?.message?.imageMessage ||
+      msg.message?.viewOnceMessage?.message?.videoMessage ||
+      msg.message?.ephemeralMessage?.message?.viewOnceMessage?.message?.imageMessage ||
+      msg.message?.ephemeralMessage?.message?.viewOnceMessage?.message?.videoMessage ||
+      msg.message?.documentWithCaptionMessage?.message?.documentMessage;
+
+
     if (msg.key.fromMe) {
       if (/\u200e/.test(bodyMessage)) return;
 
@@ -1785,7 +1393,10 @@ const handleMessage = async (
         !hasMedia &&
         msgType !== "conversation" &&
         msgType !== "extendedTextMessage" &&
-        msgType !== "vcard"
+        msgType !== "vcard" &&
+        msgType !== "reactionMessage" &&
+        msgType !== "ephemeralMessage" &&
+        msgType !== "protocolMessage"
       )
         return;
       msgContact = await getContactMessage(msg, wbot);
@@ -1796,1544 +1407,102 @@ const handleMessage = async (
     if (msgIsGroupBlock?.value === "enabled" && isGroup) return;
 
     if (isGroup) {
-      const grupoMeta = await wbot.groupMetadata(msg.key.remoteJid);
-      const msgGroupContact = {
-        id: grupoMeta.id,
-        name: grupoMeta.subject
-      };
-      groupContact = await verifyContact(msgGroupContact, wbot, companyId);
+      try {
+
+        //Verificar se bdTemp[msg.key.remoteJid] tem createdAt e se ja tem mais de 10 minutos em relação ao momento atual
+        if (bdTemp[msg.key.remoteJid] && bdTemp[msg.key.remoteJid]?.grupo?.createdAt && bdTemp[msg.key.remoteJid].grupo) {
+          const createdAt = bdTemp[msg.key.remoteJid]?.grupo.createdAt;
+          const now = new Date();
+          const diff = now.getTime() - createdAt.getTime();
+          const minutes = Math.floor(diff / 60000);
+
+          if (minutes > 10) {
+            //sleep de meio segundo para evitar bloqueio
+            await new Promise(resolve => setTimeout(resolve, 500));
+            let temp = await wbot.groupMetadata(msg.key.remoteJid);
+            temp["createdAt"] = new Date();
+            bdTemp[msg.key.remoteJid].grupo = temp
+          }
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          let temp = await wbot.groupMetadata(msg.key.remoteJid);
+          temp["createdAt"] = new Date();
+          bdTemp[msg.key.remoteJid] = { grupo: temp, ...bdTemp[msg.key.remoteJid] };
+        }
+
+        const grupoMeta = bdTemp[msg.key.remoteJid].grupo;
+
+        const msgGroupContact = {
+          id: grupoMeta.id,
+          name: grupoMeta.subject,
+        };
+        groupContact = await verifyContact(msgGroupContact, wbot, companyId);
+        if (bodyMessage && bodyMessage.toUpperCase() === "##KEYGROUP") {
+
+          const sentMessage = await wbot.sendMessage(
+            `${msg.key.remoteJid}`,
+            {
+              text: `Grupo id: ${grupoMeta.id} \nNome: ${grupoMeta.subject} \nQtd Participantes: ${grupoMeta.participants.length}\n \nParticipantes:\n${grupoMeta.participants.map((participant: { id: any; admin: any; }) => `${participant.id} ${participant.admin ? participant.admin : ""}`).join("\n")}`,
+            }
+          );
+        }
+        if (bodyMessage && bodyMessage.toUpperCase() === "##REAJA") {
+          const emoticons = ['🤘🏽', '💖', '👏🏻', '🙏🏻', '🤓']
+          const reactionMessage = {
+            react: {
+              text: emoticons[Math.floor(Math.random() * emoticons.length)] || '😬',
+              key: msg.key
+            }
+          }
+          const sentMessage = await wbot.sendMessage(
+            `${msg.key.remoteJid}`, reactionMessage)
+        }
+      } catch (err) {
+        console.log(err);
+        Sentry.setExtra('Error isGroup', { companyId, msg, });
+        Sentry.captureException(err);
+        logger.error(`Error isGroup: Err: ${err}`);
+        throw new Error("ERR_ISGROUP_LISTNER");
+      }
     }
 
     const whatsapp = await ShowWhatsAppService(wbot.id!, companyId);
-    const countMessageUnread = await getChat(whatsapp, msg);
-    const unreadMessages = msg.key.fromMe ? 0 : countMessageUnread;
     const contact = await verifyContact(msgContact, wbot, companyId);
 
-    if (unreadMessages === 0 && whatsapp.farewellMessage && formatBody(whatsapp.farewellMessage, contact) === bodyMessage)
-      return;
-
-    const ticket = await FindOrCreateTicketService(contact, whatsapp.id!, unreadMessages, companyId, groupContact,);
-
-
-    /////INTEGRAÇÕES
-    const filaescolhida = ticket.queue?.name
-    if (filaescolhida === "2ª Via de Boleto" || filaescolhida === "2 Via de Boleto") {
-      let cpfcnpj
-      cpfcnpj = getBodyMessage(msg);
-      cpfcnpj = cpfcnpj.replace(/\./g, '');
-      cpfcnpj = cpfcnpj.replace('-', '')
-      cpfcnpj = cpfcnpj.replace('/', '')
-      cpfcnpj = cpfcnpj.replace(' ', '')
-      cpfcnpj = cpfcnpj.replace(',', '')
-
-      const asaastoken = await Setting.findOne({
-        where: {
-          key: "asaas",
-          companyId
-        }
-      });
-      const ixcapikey = await Setting.findOne({
-        where: {
-          key: "tokenixc",
-          companyId
-        }
-      });
-      const urlixcdb = await Setting.findOne({
-        where: {
-          key: "ipixc",
-          companyId
-        }
-      });
-      const ipmkauth = await Setting.findOne({
-        where: {
-          key: "ipmkauth",
-          companyId
-        }
-      });
-      const clientidmkauth = await Setting.findOne({
-        where: {
-          key: "clientidmkauth",
-          companyId
-        }
-      });
-      const clientesecretmkauth = await Setting.findOne({
-        where: {
-          key: "clientsecretmkauth",
-          companyId
-        }
-      });
-
-      let urlmkauth = ipmkauth.value
-      if (urlmkauth.substr(-1) === '/') {
-        urlmkauth = urlmkauth.slice(0, -1);
-      }
-
-      //VARS
-      let url = `${urlmkauth}/api/`;
-      const Client_Id = clientidmkauth.value
-      const Client_Secret = clientesecretmkauth.value
-      const ixckeybase64 = btoa(ixcapikey.value);
-      const urlixc = urlixcdb.value
-      const asaastk = asaastoken.value
-
-      const cnpj_cpf = getBodyMessage(msg);
-      let numberCPFCNPJ = cpfcnpj;
-
-      if (urlmkauth != "" && Client_Id != "" && Client_Secret != "") {
-        if (isNumeric(numberCPFCNPJ) === true) {
-          if (cpfcnpj.length > 2) {
-            const isCPFCNPJ = validaCpfCnpj(numberCPFCNPJ)
-            if (isCPFCNPJ) {
-              const textMessage = {
-                text: formatBody(`Aguarde! Estamos consultando na base de dados!`, contact),
-              };
-              try {
-                await sleep(2000)
-                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, textMessage);
-              } catch (error) {
-                //console.log('Não consegui enviar a mensagem!')
-              }
-
-
-              axios({
-                rejectUnauthorized: true,
-                method: 'get',
-                url,
-                auth: {
-                  username: Client_Id,
-                  password: Client_Secret
-                }
-              })
-                .then(function (response) {
-                  const jtw = response.data
-                  var config = {
-                    method: 'GET',
-                    url: `${urlmkauth}/api/cliente/show/${numberCPFCNPJ}`,
-                    headers: {
-                      Authorization: `Bearer ${jtw}`
-                    }
-                  };
-                  axios.request(config)
-                    .then(async function (response) {
-                      if (response.data == 'NULL') {
-                        const textMessage = {
-                          text: formatBody(`Cadastro não localizado! *CPF/CNPJ* incorreto ou inválido. Tenta novamente!`, contact),
-                        };
-                        try {
-                          await sleep(2000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, textMessage);
-                        } catch (error) {
-                          console.log('Não consegui enviar a mensagem!')
-                        }
-                      } else {
-                        let nome
-                        let cpf_cnpj
-                        let qrcode
-                        let valor
-                        let bloqueado
-                        let linhadig
-                        let uuid_cliente
-                        let referencia
-                        let status
-                        let datavenc
-                        let descricao
-                        let titulo
-                        let statusCorrigido
-                        let valorCorrigido
-
-                        nome = response.data.dados_cliente.titulos.nome
-                        cpf_cnpj = response.data.dados_cliente.titulos.cpf_cnpj
-                        valor = response.data.dados_cliente.titulos.valor
-                        bloqueado = response.data.dados_cliente.titulos.bloqueado
-                        uuid_cliente = response.data.dados_cliente.titulos.uuid_cliente
-                        qrcode = response.data.dados_cliente.titulos.qrcode
-                        linhadig = response.data.dados_cliente.titulos.linhadig
-                        referencia = response.data.dados_cliente.titulos.referencia
-                        status = response.data.dados_cliente.titulos.status
-                        datavenc = response.data.dados_cliente.titulos.datavenc
-                        descricao = response.data.dados_cliente.titulos.descricao
-                        titulo = response.data.dados_cliente.titulos.titulo
-                        statusCorrigido = status[0].toUpperCase() + status.substr(1);
-                        valorCorrigido = valor.replace(".", ",");
-
-                        var curdate = new Date(datavenc)
-                        const mesCorreto = curdate.getMonth() + 1
-                        const ano = ('0' + curdate.getFullYear()).slice(-4)
-                        const mes = ('0' + mesCorreto).slice(-2)
-                        const dia = ('0' + curdate.getDate()).slice(-2)
-                        const anoMesDia = `${dia}/${mes}/${ano}`
-
-                        try {
-                          const textMessage = { text: formatBody(`Localizei seu Cadastro! *${nome}* só mais um instante por favor!`, contact) };
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, textMessage);
-                          const bodyBoleto = { text: formatBody(`Segue a segunda-via da sua Fatura!\n\n*Nome:* ${nome}\n*Valor:* R$ ${valorCorrigido}\n*Data Vencimento:* ${anoMesDia}\n*Link:* ${urlmkauth}/boleto/21boleto.php?titulo=${titulo}\n\nVou mandar o *código de barras* na próxima mensagem para ficar mais fácil para você copiar!`, contact) };
-                          await sleep(2000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyBoleto);
-                          const bodyLinha = { text: formatBody(`${linhadig}`, contact) };
-                          await sleep(2000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyLinha);
-                          if (qrcode !== null) {
-                            const bodyPdf = { text: formatBody(`Este é o *PIX COPIA E COLA*`, contact) };
-                            await sleep(2000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPdf);
-                            const bodyqrcode = { text: formatBody(`${qrcode}`, contact) };
-                            await sleep(2000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyqrcode);
-                            let linkBoleto = `https://chart.googleapis.com/chart?cht=qr&chs=500x500&chld=L|0&chl=${qrcode}`
-                            await sleep(2000)
-                            await sendMessageImage(wbot, contact, ticket, linkBoleto, "")
-                          }
-                          const bodyPdf = { text: formatBody(`Agora vou te enviar o boleto em *PDF* caso você precise.`, contact) };
-                          await sleep(2000)
-                          const bodyPdfQr = { text: formatBody(`${bodyPdf}`, contact) };
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPdfQr);
-                          await sleep(2000)
-
-                          //GERA O PDF                                    
-                          const nomePDF = `Boleto-${nome}-${dia}-${mes}-${ano}.pdf`;
-                          (async () => {
-                            const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-                            const page = await browser.newPage();
-                            const website_url = `${urlmkauth}/boleto/21boleto.php?titulo=${titulo}`;
-                            await page.goto(website_url, { waitUntil: 'networkidle0' });
-                            await page.emulateMediaType('screen');
-                            // Downlaod the PDF
-                            const pdf = await page.pdf({
-                              path: nomePDF,
-                              printBackground: true,
-                              format: 'A4',
-                            });
-
-                            await browser.close();
-                            await sendMessageLink(wbot, contact, ticket, nomePDF, nomePDF);
-                          });
-
-
-                          if (bloqueado === 'sim') {
-                            const bodyBloqueio = { text: formatBody(`${nome} vi tambem que a sua conexão esta bloqueada! Vou desbloquear para você por *48 horas*.`, contact) };
-                            await sleep(2000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyBloqueio);
-                            const bodyqrcode = { text: formatBody(`Estou liberando seu acesso. Por favor aguarde!`, contact) };
-                            await sleep(2000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyqrcode);
-                            var optionsdesbloq = {
-                              method: 'GET',
-                              url: `${urlmkauth}/api/cliente/desbloqueio/${uuid_cliente}`,
-                              headers: {
-                                Authorization: `Bearer ${jtw}`
-                              }
-                            };
-                            axios.request(optionsdesbloq).then(async function (response) {
-                              const bodyLiberado = { text: formatBody(`Pronto liberei! Vou precisar que você *retire* seu equipamento da tomada.\n\n*OBS: Somente retire da tomada.* \nAguarde 1 minuto e ligue novamente!`, contact) };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyLiberado);
-                              const bodyqrcode = { text: formatBody(`Veja se seu acesso voltou! Caso nao tenha voltado retorne o contato e fale com um atendente!`, contact) };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyqrcode);
-                            }).catch(async function (error) {
-                              const bodyfinaliza = { text: formatBody(`Opss! Algo de errado aconteceu! Digite *#* para voltar ao menu anterior e fale com um atendente!`, contact) };
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                            });
-                          }
-
-
-                          const bodyfinaliza = { text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact) };
-                          await sleep(12000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-
-                          await sleep(2000)
-                          fs.unlink(nomePDF, function (err) {
-                            if (err) throw err;
-                            console.log(err);
-                          })
-
-                          await UpdateTicketService({
-                            ticketData: { status: "closed" },
-                            ticketId: ticket.id,
-                            companyId: ticket.companyId,
-                          });
-
-                        } catch (error) {
-                          console.log('11 Não consegui enviar a mensagem!')
-                        }
-                      }
-                    })
-                    .catch(async function (error) {
-                      try {
-                        const bodyBoleto = { text: formatBody(`Não consegui encontrar seu cadastro.\n\nPor favor tente novamente!\nOu digite *#* para voltar ao *Menu Anterior*`, contact) };
-                        await sleep(2000)
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyBoleto);
-                      } catch (error) {
-                        console.log('111 Não consegui enviar a mensagem!')
-                      }
-
-                    });
-                })
-                .catch(async function (error) {
-                  const bodyfinaliza = { text: formatBody(`Opss! Algo de errado aconteceu! Digite *#* para voltar ao menu anterior e fale com um atendente!`, contact) };
-                  await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                });
-            } else {
-              const body = { text: formatBody(`Este CPF/CNPJ não é válido!\n\nPor favor tente novamente!\nOu digite *#* para voltar ao *Menu Anterior*`, contact) };
-              await sleep(2000)
-              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-            }
-          }
-        }
-      }
-
-      if (asaastoken.value !== "") {
-        if (isNumeric(numberCPFCNPJ) === true) {
-          if (cpfcnpj.length > 2) {
-            const isCPFCNPJ = validaCpfCnpj(numberCPFCNPJ)
-            if (isCPFCNPJ) {
-              const body = {
-                text: formatBody(`Aguarde! Estamos consultando na base de dados!`, contact),
-              };
-              try {
-                await sleep(2000)
-                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-              } catch (error) {
-                //console.log('Não consegui enviar a mensagem!')
-              }
-              var optionsc = {
-                method: 'GET',
-                url: 'https://www.asaas.com/api/v3/customers',
-                params: { cpfCnpj: numberCPFCNPJ },
-                headers: {
-                  'Content-Type': 'application/json',
-                  access_token: asaastk
-                }
-              };
-
-              axios.request(optionsc).then(async function (response) {
-                let nome;
-                let id_cliente;
-                let totalCount;
-
-                nome = response?.data?.data[0]?.name;
-                id_cliente = response?.data?.data[0]?.id;
-                totalCount = response?.data?.totalCount;
-
-                if (totalCount === 0) {
-                  const body = {
-                    text: formatBody(`Cadastro não localizado! *CPF/CNPJ* incorreto ou inválido. Tenta novamente!`, contact),
-                  };
-                  await sleep(2000)
-                  await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                } else {
-
-                  const body = {
-                    text: formatBody(`Localizei seu Cadastro! \n*${nome}* só mais um instante por favor!`, contact),
-                  };
-                  await sleep(2000)
-                  await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                  var optionsListpaymentOVERDUE = {
-                    method: 'GET',
-                    url: 'https://www.asaas.com/api/v3/payments',
-                    params: { customer: id_cliente, status: 'OVERDUE' },
-                    headers: {
-                      'Content-Type': 'application/json',
-                      access_token: asaastk
-                    }
-                  };
-
-                  axios.request(optionsListpaymentOVERDUE).then(async function (response) {
-                    let totalCount_overdue;
-                    totalCount_overdue = response?.data?.totalCount;
-
-                    if (totalCount_overdue === 0) {
-                      const body = {
-                        text: formatBody(`Você não tem nenhuma fatura vencidada! \nVou te enviar a proxima fatura. Por favor aguarde!`, contact),
-                      };
-                      await sleep(2000)
-                      await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                      var optionsPENDING = {
-                        method: 'GET',
-                        url: 'https://www.asaas.com/api/v3/payments',
-                        params: { customer: id_cliente, status: 'PENDING' },
-                        headers: {
-                          'Content-Type': 'application/json',
-                          access_token: asaastk
-                        }
-                      };
-
-                      axios.request(optionsPENDING).then(async function (response) {
-                        function sortfunction(a, b) {
-                          return a.dueDate.localeCompare(b.dueDate);
-                        }
-                        const ordenado = response?.data?.data.sort(sortfunction);
-                        let id_payment_pending;
-                        let value_pending;
-                        let description_pending;
-                        let invoiceUrl_pending;
-                        let dueDate_pending;
-                        let invoiceNumber_pending;
-                        let totalCount_pending;
-                        let value_pending_corrigida;
-                        let dueDate_pending_corrigida;
-
-                        id_payment_pending = ordenado[0]?.id;
-                        value_pending = ordenado[0]?.value;
-                        description_pending = ordenado[0]?.description;
-                        invoiceUrl_pending = ordenado[0]?.invoiceUrl;
-                        dueDate_pending = ordenado[0]?.dueDate;
-                        invoiceNumber_pending = ordenado[0]?.invoiceNumber;
-                        totalCount_pending = response?.data?.totalCount;
-
-                        dueDate_pending_corrigida = dueDate_pending?.split('-')?.reverse()?.join('/');
-                        value_pending_corrigida = value_pending.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' });
-
-                        const bodyBoleto = {
-                          text: formatBody(`Segue a segunda-via da sua Fatura!\n\n*Fatura:* ${invoiceNumber_pending}\n*Nome:* ${nome}\n*Valor:* R$ ${value_pending_corrigida}\n*Data Vencimento:* ${dueDate_pending_corrigida}\n*Descrição:*\n${description_pending}\n*Link:* ${invoiceUrl_pending}`, contact),
-                        };
-                        await sleep(2000)
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyBoleto);
-                        //GET DADOS PIX
-                        var optionsGetPIX = {
-                          method: 'GET',
-                          url: `https://www.asaas.com/api/v3/payments/${id_payment_pending}/pixQrCode`,
-                          headers: {
-                            'Content-Type': 'application/json',
-                            access_token: asaastk
-                          }
-                        };
-
-                        axios.request(optionsGetPIX).then(async function (response) {
-                          let success;
-                          let payload;
-
-                          success = response?.data?.success;
-                          payload = response?.data?.payload;
-
-                          if (success === true) {
-                            const bodyPixCP = {
-                              text: formatBody(`Este é o *PIX Copia e Cola*`, contact),
-                            };
-                            await sleep(2000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPixCP);
-                            const bodyPix = {
-                              text: formatBody(`${payload}`, contact),
-                            };
-                            await sleep(2000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPix);
-                            let linkBoleto = `https://chart.googleapis.com/chart?cht=qr&chs=500x500&chld=L|0&chl=${payload}`
-                            await sleep(2000)
-                            await sendMessageImage(wbot, contact, ticket, linkBoleto, '')
-                            var optionsBoletopend = {
-                              method: 'GET',
-                              url: `https://www.asaas.com/api/v3/payments/${id_payment_pending}/identificationField`,
-                              headers: {
-                                'Content-Type': 'application/json',
-                                access_token: asaastk
-                              }
-                            };
-
-                            axios.request(optionsBoletopend).then(async function (response) {
-                              let codigo_barras
-                              codigo_barras = response.data.identificationField;
-                              const bodycodigoBarras = {
-                                text: formatBody(`${codigo_barras}`, contact),
-                              };
-                              if (response.data?.errors?.code !== 'invalid_action') {
-                                const bodycodigo = {
-                                  text: formatBody(`Este é o *Código de Barras*!`, contact),
-                                };
-                                await sleep(2000)
-                                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodycodigo);
-                                await sleep(2000)
-                                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodycodigoBarras);
-                                const bodyfinaliza = {
-                                  text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                                };
-                                await sleep(2000)
-                                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                                await sleep(2000)
-                                await UpdateTicketService({
-                                  ticketData: { status: "closed" },
-                                  ticketId: ticket.id,
-                                  companyId: ticket.companyId,
-                                });
-                              } else {
-                                const bodyfinaliza = {
-                                  text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                                };
-                                await sleep(2000)
-                                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                                await UpdateTicketService({
-                                  ticketData: { status: "closed" },
-                                  ticketId: ticket.id,
-                                  companyId: ticket.companyId,
-                                });
-                              }
-
-                            }).catch(async function (error) {
-                              const bodyfinaliza = {
-                                text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                              };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                              await UpdateTicketService({
-                                ticketData: { status: "closed" },
-                                ticketId: ticket.id,
-                                companyId: ticket.companyId,
-                              });
-                            });
-                          }
-
-                        }).catch(async function (error) {
-                          const body = {
-                            text: formatBody(`*Opss!!!!*\nOcorreu um erro! Digite *#* e fale com um *Atendente*!`, contact),
-                          };
-                          await sleep(2000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                        });
-
-                      }).catch(async function (error) {
-                        const body = {
-                          text: formatBody(`*Opss!!!!*\nOcorreu um erro! Digite *#* e fale com um *Atendente*!`, contact),
-                        };
-                        await sleep(2000)
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                      });
-                    } else {
-                      let id_payment_overdue;
-                      let value_overdue;
-                      let description_overdue;
-                      let invoiceUrl_overdue;
-                      let dueDate_overdue;
-                      let invoiceNumber_overdue;
-
-                      let value_overdue_corrigida;
-                      let dueDate_overdue_corrigida;
-
-                      id_payment_overdue = response?.data?.data[0]?.id;
-                      value_overdue = response?.data?.data[0]?.value;
-                      description_overdue = response?.data?.data[0]?.description;
-                      invoiceUrl_overdue = response?.data?.data[0]?.invoiceUrl;
-                      dueDate_overdue = response?.data?.data[0]?.dueDate;
-                      invoiceNumber_overdue = response?.data?.data[0]?.invoiceNumber;
-
-
-                      dueDate_overdue_corrigida = dueDate_overdue?.split('-')?.reverse()?.join('/');
-                      value_overdue_corrigida = value_overdue.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' });
-                      const body = {
-                        text: formatBody(`Você tem *${totalCount_overdue}* fatura(s) vencidada(s)! \nVou te enviar. Por favor aguarde!`, contact),
-                      };
-                      await sleep(2000)
-                      await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                      const bodyBoleto = {
-                        text: formatBody(`Segue a segunda-via da sua Fatura!\n\n*Fatura:* ${invoiceNumber_overdue}\n*Nome:* ${nome}\n*Valor:* R$ ${value_overdue_corrigida}\n*Data Vencimento:* ${dueDate_overdue_corrigida}\n*Descrição:*\n${description_overdue}\n*Link:* ${invoiceUrl_overdue}`, contact),
-                      };
-                      await sleep(2000)
-                      await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyBoleto);
-                      //GET DADOS PIX
-                      var optionsGetPIX = {
-                        method: 'GET',
-                        url: `https://www.asaas.com/api/v3/payments/${id_payment_overdue}/pixQrCode`,
-                        headers: {
-                          'Content-Type': 'application/json',
-                          access_token: asaastk
-                        }
-                      };
-
-                      axios.request(optionsGetPIX).then(async function (response) {
-                        let success;
-                        let payload;
-
-                        success = response?.data?.success;
-                        payload = response?.data?.payload;
-                        if (success === true) {
-
-                          const bodyPixCP = {
-                            text: formatBody(`Este é o *PIX Copia e Cola*`, contact),
-                          };
-                          await sleep(2000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPixCP);
-                          const bodyPix = {
-                            text: formatBody(`${payload}`, contact),
-                          };
-                          await sleep(2000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPix);
-                          let linkBoleto = `https://chart.googleapis.com/chart?cht=qr&chs=500x500&chld=L|0&chl=${payload}`
-                          await sleep(2000)
-                          await sendMessageImage(wbot, contact, ticket, linkBoleto, '')
-                          var optionsBoleto = {
-                            method: 'GET',
-                            url: `https://www.asaas.com/api/v3/payments/${id_payment_overdue}/identificationField`,
-                            headers: {
-                              'Content-Type': 'application/json',
-                              access_token: asaastk
-                            }
-                          };
-
-                          axios.request(optionsBoleto).then(async function (response) {
-
-                            let codigo_barras
-                            codigo_barras = response.data.identificationField;
-                            const bodycodigoBarras = {
-                              text: formatBody(`${codigo_barras}`, contact),
-                            };
-                            if (response.data?.errors?.code !== 'invalid_action') {
-                              const bodycodigo = {
-                                text: formatBody(`Este é o *Código de Barras*!`, contact),
-                              };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodycodigo);
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodycodigoBarras);
-                              const bodyfinaliza = {
-                                text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                              };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                              await UpdateTicketService({
-                                ticketData: { status: "closed" },
-                                ticketId: ticket.id,
-                                companyId: ticket.companyId,
-                              });
-                            } else {
-                              const bodyfinaliza = {
-                                text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                              };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                              await UpdateTicketService({
-                                ticketData: { status: "closed" },
-                                ticketId: ticket.id,
-                                companyId: ticket.companyId,
-                              });
-                            }
-
-                          }).catch(function (error) {
-                            //console.error(error);
-                          });
-
-                        }
-                      }).catch(function (error) {
-
-                      });
-
-                    }
-
-                  }).catch(async function (error) {
-                    const body = {
-                      text: formatBody(`*Opss!!!!*\nOcorreu um erro! Digite *#* e fale com um *Atendente*!`, contact),
-                    };
-                    await sleep(2000)
-                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                  });
-                }
-              }).catch(async function (error) {
-                const body = {
-                  text: formatBody(`*Opss!!!!*\nOcorreu um erro! Digite *#* e fale com um *Atendente*!`, contact),
-                };
-                await sleep(2000)
-                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-              });
-            }
-          }
-        }
-      }
-
-      if (ixcapikey.value != "" && urlixcdb.value != "") {
-        if (isNumeric(numberCPFCNPJ) === true) {
-          if (cpfcnpj.length > 2) {
-            const isCPFCNPJ = validaCpfCnpj(numberCPFCNPJ)
-            if (isCPFCNPJ) {
-              if (numberCPFCNPJ.length <= 11) {
-                numberCPFCNPJ = numberCPFCNPJ.replace(/(\d{3})(\d)/, "$1.$2")
-                numberCPFCNPJ = numberCPFCNPJ.replace(/(\d{3})(\d)/, "$1.$2")
-                numberCPFCNPJ = numberCPFCNPJ.replace(/(\d{3})(\d{1,2})$/, "$1-$2")
-              } else {
-                numberCPFCNPJ = numberCPFCNPJ.replace(/^(\d{2})(\d)/, "$1.$2")
-                numberCPFCNPJ = numberCPFCNPJ.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-                numberCPFCNPJ = numberCPFCNPJ.replace(/\.(\d{3})(\d)/, ".$1/$2")
-                numberCPFCNPJ = numberCPFCNPJ.replace(/(\d{4})(\d)/, "$1-$2")
-              }
-              //const token = await CheckSettingsHelper("OBTEM O TOKEN DO BANCO (dei insert na tabela settings)")
-              const body = {
-                text: formatBody(`Aguarde! Estamos consultando na base de dados!`, contact),
-              };
-              try {
-                await sleep(2000)
-                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-              } catch (error) {
-                //console.log('Não consegui enviar a mensagem!')
-              }
-              var options = {
-                method: 'GET',
-                url: `${urlixc}/webservice/v1/cliente`,
-                headers: {
-                  ixcsoft: 'listar',
-                  Authorization: `Basic ${ixckeybase64}`
-                },
-                data: {
-                  qtype: 'cliente.cnpj_cpf',
-                  query: numberCPFCNPJ,
-                  oper: '=',
-                  page: '1',
-                  rp: '1',
-                  sortname: 'cliente.cnpj_cpf',
-                  sortorder: 'asc'
-                }
-              };
-
-              let teste = axios.request(options).then(async function (response) {
-                if (response.data.type === 'error') {
-                  const body = {
-                    text: formatBody(`*Opss!!!!*\nOcorreu um erro! Digite *#* e fale com um *Atendente*!`, contact),
-                  };
-                  await sleep(2000)
-                  await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                } if (response.data.total === 0) {
-                  const body = {
-                    text: formatBody(`Cadastro não localizado! *CPF/CNPJ* incorreto ou inválido. Tenta novamente!`, contact),
-                  };
-                  try {
-                    await sleep(2000)
-                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                  } catch (error) {
-                    //console.log('Não consegui enviar a mensagem!')
-                  }
-                } else {
-
-                  let nome;
-                  let id;
-                  let type;
-
-                  nome = response.data?.registros[0]?.razao
-                  id = response.data?.registros[0]?.id
-                  type = response.data?.type
-
-
-                  const body = {
-                    text: formatBody(`Localizei seu Cadastro! \n*${nome}* só mais um instante por favor!`, contact),
-                  };
-                  await sleep(2000)
-                  await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                  var boleto = {
-                    method: 'GET',
-                    url: `${urlixc}/webservice/v1/fn_areceber`,
-                    headers: {
-                      ixcsoft: 'listar',
-                      Authorization: `Basic ${ixckeybase64}`
-                    },
-                    data: {
-                      qtype: 'fn_areceber.id_cliente',
-                      query: id,
-                      oper: '=',
-                      page: '1',
-                      rp: '1',
-                      sortname: 'fn_areceber.data_vencimento',
-                      sortorder: 'asc',
-                      grid_param: '[{"TB":"fn_areceber.status", "OP" : "=", "P" : "A"}]'
-                    }
-                  };
-                  axios.request(boleto).then(async function (response) {
-
-
-
-                    let gateway_link;
-                    let valor;
-                    let datavenc;
-                    let datavencCorrigida;
-                    let valorCorrigido;
-                    let linha_digitavel;
-                    let impresso;
-                    let idboleto;
-
-                    idboleto = response.data?.registros[0]?.id
-                    gateway_link = response.data?.registros[0]?.gateway_link
-                    valor = response.data?.registros[0]?.valor
-                    datavenc = response.data?.registros[0]?.data_vencimento
-                    linha_digitavel = response.data?.registros[0]?.linha_digitavel
-                    impresso = response.data?.registros[0]?.impresso
-                    valorCorrigido = valor.replace(".", ",");
-                    datavencCorrigida = datavenc.split('-').reverse().join('/')
-
-                    //console.log(response.data?.registros[0])
-                    //INFORMAÇÕES BOLETO
-                    const bodyBoleto = {
-                      text: formatBody(`Segue a segunda-via da sua Fatura!\n\n*Fatura:* ${idboleto}\n*Nome:* ${nome}\n*Valor:* R$ ${valorCorrigido}\n*Data Vencimento:* ${datavencCorrigida}\n\nVou mandar o *código de barras* na próxima mensagem para ficar mais fácil para você copiar!`, contact),
-                    };
-                    //await sleep(2000)
-                    //await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyBoleto);
-                    //LINHA DIGITAVEL                    
-                    if (impresso !== "S") {
-                      //IMPRIME BOLETO PARA GERAR CODIGO BARRAS
-                      var boletopdf = {
-                        method: 'GET',
-                        url: `${urlixc}/webservice/v1/get_boleto`,
-                        headers: {
-                          ixcsoft: 'listar',
-                          Authorization: `Basic ${ixckeybase64}`
-                        },
-                        data: {
-                          boletos: idboleto,
-                          juro: 'N',
-                          multa: 'N',
-                          atualiza_boleto: 'N',
-                          tipo_boleto: 'arquivo',
-                          base64: 'S'
-                        }
-                      };
-
-                      axios.request(boletopdf).then(function (response) {
-                      }).catch(function (error) {
-                        console.error(error);
-                      });
-                    }
-
-                    //SE TIVER PIX ENVIA O PIX
-                    var optionsPix = {
-                      method: 'GET',
-                      url: `${urlixc}/webservice/v1/get_pix`,
-                      headers: {
-                        ixcsoft: 'listar',
-                        Authorization: `Basic ${ixckeybase64}`
-                      },
-                      data: { id_areceber: idboleto }
-                    };
-
-                    axios.request(optionsPix).then(async function (response) {
-                      let tipo;
-                      let pix;
-
-                      tipo = response.data?.type;
-                      pix = response.data?.pix?.qrCode?.qrcode;
-                      if (tipo === 'success') {
-                        const bodyBoletoPix = {
-                          text: formatBody(`Segue a segunda-via da sua Fatura!\n\n*Fatura:* ${idboleto}\n*Nome:* ${nome}\n*Valor:* R$ ${valorCorrigido}\n*Data Vencimento:* ${datavencCorrigida}\n\nVou te enviar o *Código de Barras* e o *PIX* basta clicar em qual você quer utlizar que já vai copiar! Depois basta realizar o pagamento no seu banco`, contact),
-                        };
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyBoletoPix);
-                        const body_linhadigitavel = {
-                          text: formatBody("Este é o *Código de Barras*", contact),
-                        };
-                        await sleep(2000)
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_linhadigitavel);
-                        await sleep(2000)
-                        const body_linha_digitavel = {
-                          text: formatBody(`${linha_digitavel}`, contact),
-                        };
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_linha_digitavel);
-                        const body_pix = {
-                          text: formatBody("Este é o *PIX Copia e Cola*", contact),
-                        };
-                        await sleep(2000)
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_pix);
-                        await sleep(2000)
-                        const body_pix_dig = {
-                          text: formatBody(`${pix}`, contact),
-                        };
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_pix_dig);
-                        const body_pixqr = {
-                          text: formatBody("QR CODE do *PIX*", contact),
-                        };
-                        await sleep(2000)
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_pixqr);
-                        let linkBoleto = `https://chart.googleapis.com/chart?cht=qr&chs=500x500&chld=L|0&chl=${pix}`
-                        await sleep(2000)
-                        await sendMessageImage(wbot, contact, ticket, linkBoleto, '')
-                        ///VE SE ESTA BLOQUEADO PARA LIBERAR!
-                        var optionscontrato = {
-                          method: 'POST',
-                          url: `${urlixc}/webservice/v1/cliente_contrato`,
-                          headers: {
-                            ixcsoft: 'listar',
-                            Authorization: `Basic ${ixckeybase64}`
-                          },
-                          data: {
-                            qtype: 'cliente_contrato.id_cliente',
-                            query: id,
-                            oper: '=',
-                            page: '1',
-                            rp: '1',
-                            sortname: 'cliente_contrato.id',
-                            sortorder: 'asc'
-                          }
-                        };
-                        axios.request(optionscontrato).then(async function (response) {
-                          let status_internet;
-                          let id_contrato;
-                          status_internet = response.data?.registros[0]?.status_internet;
-                          id_contrato = response.data?.registros[0]?.id;
-                          if (status_internet !== 'A') {
-                            const bodyPdf = {
-                              text: formatBody(`*${nome}* vi tambem que a sua conexão esta bloqueada! Vou desbloquear para você.`, contact),
-                            };
-                            await sleep(2000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPdf);
-                            const bodyqrcode = {
-                              text: formatBody(`Estou liberando seu acesso. Por favor aguarde!`, contact),
-                            };
-                            await sleep(2000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyqrcode);
-                            //REALIZANDO O DESBLOQUEIO   
-                            var optionsdesbloqeuio = {
-                              method: 'POST',
-                              url: `${urlixc}/webservice/v1/desbloqueio_confianca`,
-                              headers: {
-                                Authorization: `Basic ${ixckeybase64}`
-                              },
-                              data: { id: id_contrato }
-                            };
-
-                            axios.request(optionsdesbloqeuio).then(async function (response) {
-                              let tipo;
-                              let mensagem;
-                              tipo = response.data?.tipo;
-                              mensagem = response.data?.mensagem;
-                              if (tipo === 'sucesso') {
-                                //DESCONECTANDO O CLIENTE PARA VOLTAR O ACESSO
-                                var optionsRadius = {
-                                  method: 'GET',
-                                  url: `${urlixc}/webservice/v1/radusuarios`,
-                                  headers: {
-                                    ixcsoft: 'listar',
-                                    Authorization: `Basic ${ixckeybase64}`
-                                  },
-                                  data: {
-                                    qtype: 'radusuarios.id_cliente',
-                                    query: id,
-                                    oper: '=',
-                                    page: '1',
-                                    rp: '1',
-                                    sortname: 'radusuarios.id',
-                                    sortorder: 'asc'
-                                  }
-                                };
-
-                                axios.request(optionsRadius).then(async function (response) {
-                                  let tipo;
-                                  tipo = response.data?.type;
-                                  if (tipo === 'success') {
-                                    const body_mensagem = {
-                                      text: formatBody(`${mensagem}`, contact),
-                                    };
-                                    await sleep(2000)
-                                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_mensagem);
-                                    const bodyPdf = {
-                                      text: formatBody(`Fiz os procedimentos de liberação! Agora aguarde até 5 minutos e veja se sua conexão irá retornar! .\n\nCaso não tenha voltado, retorne o contato e fale com um atendente!`, contact),
-                                    };
-                                    await sleep(2000)
-                                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPdf);
-                                    const bodyfinaliza = {
-                                      text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                                    };
-                                    await sleep(2000)
-                                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                                    await UpdateTicketService({
-                                      ticketData: { status: "closed" },
-                                      ticketId: ticket.id,
-                                      companyId: ticket.companyId,
-                                    });
-                                  }
-                                }).catch(function (error) {
-                                  console.error(error);
-                                });
-                                //FIM DA DESCONEXÃO 
-                              } else {
-                                var msgerrolbieracao = response.data.mensagem
-                                const bodyerro = {
-                                  text: formatBody(`Ops! Ocorreu um erro e nao consegui desbloquear`, contact),
-                                };
-                                const msg_errolbieracao = {
-                                  text: formatBody(`${msgerrolbieracao}`, contact),
-                                };
-                                await sleep(2000)
-                                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyerro);
-                                await sleep(2000)
-                                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, msg_errolbieracao);
-                                const bodyerroatendent = {
-                                  text: formatBody(`Digite *#* para voltar o menu e fale com um atendente!`, contact),
-                                };
-                                await sleep(2000)
-                                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyerroatendent);
-                              }
-
-                            }).catch(async function (error) {
-                              const bodyerro = {
-                                text: formatBody(`Ops! Ocorreu um erro digite *#* e fale com um atendente!`, contact),
-                              };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyerro);
-                            });
-                          } else {
-                            const bodyfinaliza = {
-                              text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                            };
-                            await sleep(8000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                            await UpdateTicketService({
-                              ticketData: { status: "closed" },
-                              ticketId: ticket.id,
-                              companyId: ticket.companyId,
-                            });
-                          }
-
-                          //
-                        }).catch(async function (error) {
-
-                          const bodyerro = {
-                            text: formatBody(`Ops! Ocorreu um erro digite *#* e fale com um atendente!`, contact),
-                          };
-                          await sleep(2000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyerro);
-                        });
-                        ///VE SE ESTA BLOQUEADO PARA LIBERAR!
-                      } else {
-                        const bodyBoleto = {
-                          text: formatBody(`Segue a segunda-via da sua Fatura!\n\n*Fatura:* ${idboleto}\n*Nome:* ${nome}\n*Valor:* R$ ${valorCorrigido}\n*Data Vencimento:* ${datavencCorrigida}\n\nBasta clicar aqui em baixo em código de barras para copiar, apos isto basta realizar o pagamento em seu banco!`, contact),
-                        };
-                        await sleep(2000)
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyBoleto);
-                        const body = {
-                          text: formatBody(`Este é o *Codigo de Barras*`, contact),
-                        };
-                        await sleep(2000)
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                        await sleep(2000)
-                        const body_linha_digitavel = {
-                          text: formatBody(`${linha_digitavel}`, contact),
-                        };
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_linha_digitavel);
-                        ///VE SE ESTA BLOQUEADO PARA LIBERAR!
-                        var optionscontrato = {
-                          method: 'POST',
-                          url: `${urlixc}/webservice/v1/cliente_contrato`,
-                          headers: {
-                            ixcsoft: 'listar',
-                            Authorization: `Basic ${ixckeybase64}`
-                          },
-                          data: {
-                            qtype: 'cliente_contrato.id_cliente',
-                            query: id,
-                            oper: '=',
-                            page: '1',
-                            rp: '1',
-                            sortname: 'cliente_contrato.id',
-                            sortorder: 'asc'
-                          }
-                        };
-                        axios.request(optionscontrato).then(async function (response) {
-                          let status_internet;
-                          let id_contrato;
-                          status_internet = response.data?.registros[0]?.status_internet;
-                          id_contrato = response.data?.registros[0]?.id;
-                          if (status_internet !== 'A') {
-                            const bodyPdf = {
-                              text: formatBody(`*${nome}* vi tambem que a sua conexão esta bloqueada! Vou desbloquear para você.`, contact),
-                            };
-                            await sleep(2000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPdf);
-                            const bodyqrcode = {
-                              text: formatBody(`Estou liberando seu acesso. Por favor aguarde!`, contact),
-                            };
-                            await sleep(2000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyqrcode);
-                            //REALIZANDO O DESBLOQUEIO   
-                            var optionsdesbloqeuio = {
-                              method: 'POST',
-                              url: `${urlixc}/webservice/v1/desbloqueio_confianca`,
-                              headers: {
-                                Authorization: `Basic ${ixckeybase64}`
-                              },
-                              data: { id: id_contrato }
-                            };
-
-                            axios.request(optionsdesbloqeuio).then(async function (response) {
-                              let tipo;
-                              let mensagem;
-                              tipo = response.data?.tipo;
-                              mensagem = response.data?.mensagem;
-                              if (tipo === 'sucesso') {
-                                //DESCONECTANDO O CLIENTE PARA VOLTAR O ACESSO
-                                var optionsRadius = {
-                                  method: 'GET',
-                                  url: `${urlixc}/webservice/v1/radusuarios`,
-                                  headers: {
-                                    ixcsoft: 'listar',
-                                    Authorization: `Basic ${ixckeybase64}`
-                                  },
-                                  data: {
-                                    qtype: 'radusuarios.id_cliente',
-                                    query: id,
-                                    oper: '=',
-                                    page: '1',
-                                    rp: '1',
-                                    sortname: 'radusuarios.id',
-                                    sortorder: 'asc'
-                                  }
-                                };
-
-                                axios.request(optionsRadius).then(async function (response) {
-                                  let tipo;
-                                  tipo = response.data?.type;
-                                  const body_mensagem = {
-                                    text: formatBody(`${mensagem}`, contact),
-                                  };
-                                  if (tipo === 'success') {
-                                    await sleep(2000)
-                                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_mensagem);
-                                    const bodyPdf = {
-                                      text: formatBody(`Fiz os procedimentos de liberação! Agora aguarde até 5 minutos e veja se sua conexão irá retornar! .\n\nCaso não tenha voltado, retorne o contato e fale com um atendente!`, contact),
-                                    };
-                                    await sleep(2000)
-                                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPdf);
-                                    const bodyfinaliza = {
-                                      text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                                    };
-                                    await sleep(2000)
-                                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                                    await UpdateTicketService({
-                                      ticketData: { status: "closed" },
-                                      ticketId: ticket.id,
-                                      companyId: ticket.companyId,
-                                    });
-                                  } else {
-                                    await sleep(2000)
-                                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_mensagem);
-                                    const bodyPdf = {
-                                      text: formatBody(`Vou precisar que você *retire* seu equipamento da tomada.\n\n*OBS: Somente retire da tomada.* \nAguarde 1 minuto e ligue novamente!`, contact),
-                                    };
-                                    await sleep(2000)
-                                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPdf);
-                                    const bodyqrcode = {
-                                      text: formatBody(`Veja se seu acesso voltou! Caso não tenha voltado retorne o contato e fale com um atendente!`, contact),
-                                    };
-                                    await sleep(2000)
-                                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyqrcode);
-                                    const bodyfinaliza = {
-                                      text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                                    };
-                                    await sleep(2000)
-                                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                                    await UpdateTicketService({
-                                      ticketData: { status: "closed" },
-                                      ticketId: ticket.id,
-                                      companyId: ticket.companyId,
-                                    });
-                                  }
-                                }).catch(function (error) {
-                                  console.error(error);
-                                });
-                                //FIM DA DESCONEXÃO 
-                              } else {
-                                const bodyerro = {
-                                  text: formatBody(`Ops! Ocorreu um erro e nao consegui desbloquear! Digite *#* e fale com um atendente!`, contact),
-                                };
-                                await sleep(2000)
-                                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyerro);
-                              }
-
-                            }).catch(async function (error) {
-                              const bodyerro = {
-                                text: formatBody(`Ops! Ocorreu um erro digite *#* e fale com um atendente!`, contact),
-                              };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyerro);
-                            });
-                          } else {
-                            const bodyfinaliza = {
-                              text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                            };
-                            await sleep(2000)
-                            await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                            await UpdateTicketService({
-                              ticketData: { status: "closed" },
-                              ticketId: ticket.id,
-                              companyId: ticket.companyId,
-                            });
-                          }
-
-                          //
-                        }).catch(async function (error) {
-                          const bodyerro = {
-                            text: formatBody(`Ops! Ocorreu um erro digite *#* e fale com um atendente!`, contact),
-                          };
-                          await sleep(2000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyerro);
-                        });
-                        ///VE SE ESTA BLOQUEADO PARA LIBERAR!                            
-                      }
-                    }).catch(function (error) {
-                      console.error(error);
-                    });
-                    //FIM DO PÌX
-
-
-
-                  }).catch(function (error) {
-                    console.error(error);
-                  });
-
-                }
-
-              }).catch(async function (error) {
-                logger.error(error.reason);
-                const body = {
-                  text: formatBody(`*Opss!!!!*\nOcorreu um erro! Digite *#* e fale com um *Atendente*!`, contact),
-                };
-                await sleep(2000)
-                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-              });
-            } else {
-              const body = {
-                text: formatBody(`Este CPF/CNPJ não é válido!\n\nPor favor tente novamente!\nOu digite *#* para voltar ao *Menu Anterior*`, contact),
-              };
-              await sleep(2000)
-              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-            }
-          }
-        }
-
-
-      }
+    let unreadMessages = 0;
+
+
+    if (msg.key.fromMe) {
+      await cacheLayer.set(`contacts:${contact.id}:unreads`, "0");
+    } else {
+      const unreads = await cacheLayer.get(`contacts:${contact.id}:unreads`);
+      unreadMessages = +unreads + 1;
+      await cacheLayer.set(
+        `contacts:${contact.id}:unreads`,
+        `${unreadMessages}`
+      );
     }
 
-    if (filaescolhida === "Religue de Confiança" || filaescolhida === "Liberação em Confiança") {
-      let cpfcnpj
-      cpfcnpj = getBodyMessage(msg);
-      cpfcnpj = cpfcnpj.replace(/\./g, '');
-      cpfcnpj = cpfcnpj.replace('-', '')
-      cpfcnpj = cpfcnpj.replace('/', '')
-      cpfcnpj = cpfcnpj.replace(' ', '')
-      cpfcnpj = cpfcnpj.replace(',', '')
+    const lastMessage = await Message.findOne({
+      where: {
+        contactId: contact.id,
+        companyId,
+      },
+      order: [["createdAt", "DESC"]],
+    });
 
-      const asaastoken = await Setting.findOne({
-        where: {
-          key: "asaas",
-          companyId
-        }
-      });
-      const ixcapikey = await Setting.findOne({
-        where: {
-          key: "tokenixc",
-          companyId
-        }
-      });
-      const urlixcdb = await Setting.findOne({
-        where: {
-          key: "ipixc",
-          companyId
-        }
-      });
-      const ipmkauth = await Setting.findOne({
-        where: {
-          key: "ipmkauth",
-          companyId
-        }
-      });
-      const clientidmkauth = await Setting.findOne({
-        where: {
-          key: "clientidmkauth",
-          companyId
-        }
-      });
-      const clientesecretmkauth = await Setting.findOne({
-        where: {
-          key: "clientsecretmkauth",
-          companyId
-        }
-      });
-
-      let urlmkauth = ipmkauth.value
-      if (urlmkauth.substr(-1) === '/') {
-        urlmkauth = urlmkauth.slice(0, -1);
-      }
-
-      //VARS
-      let url = `${urlmkauth}/api/`;
-      const Client_Id = clientidmkauth.value
-      const Client_Secret = clientesecretmkauth.value
-      const ixckeybase64 = btoa(ixcapikey.value);
-      const urlixc = urlixcdb.value
-      const asaastk = asaastoken.value
-
-      const cnpj_cpf = getBodyMessage(msg);
-      let numberCPFCNPJ = cpfcnpj;
-
-      if (ixcapikey.value != "" && urlixcdb.value != "") {
-        if (isNumeric(numberCPFCNPJ) === true) {
-          if (cpfcnpj.length > 2) {
-            const isCPFCNPJ = validaCpfCnpj(numberCPFCNPJ)
-            if (isCPFCNPJ) {
-              if (numberCPFCNPJ.length <= 11) {
-                numberCPFCNPJ = numberCPFCNPJ.replace(/(\d{3})(\d)/, "$1.$2")
-                numberCPFCNPJ = numberCPFCNPJ.replace(/(\d{3})(\d)/, "$1.$2")
-                numberCPFCNPJ = numberCPFCNPJ.replace(/(\d{3})(\d{1,2})$/, "$1-$2")
-              } else {
-                numberCPFCNPJ = numberCPFCNPJ.replace(/^(\d{2})(\d)/, "$1.$2")
-                numberCPFCNPJ = numberCPFCNPJ.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-                numberCPFCNPJ = numberCPFCNPJ.replace(/\.(\d{3})(\d)/, ".$1/$2")
-                numberCPFCNPJ = numberCPFCNPJ.replace(/(\d{4})(\d)/, "$1-$2")
-              }
-              //const token = await CheckSettingsHelper("OBTEM O TOKEN DO BANCO (dei insert na tabela settings)")
-              const body = {
-                text: formatBody(`Aguarde! Estamos consultando na base de dados!`, contact),
-              };
-              try {
-                await sleep(2000)
-                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-              } catch (error) {
-                //console.log('Não consegui enviar a mensagem!')
-              }
-              var options = {
-                method: 'GET',
-                url: `${urlixc}/webservice/v1/cliente`,
-                headers: {
-                  ixcsoft: 'listar',
-                  Authorization: `Basic ${ixckeybase64}`
-                },
-                data: {
-                  qtype: 'cliente.cnpj_cpf',
-                  query: numberCPFCNPJ,
-                  oper: '=',
-                  page: '1',
-                  rp: '1',
-                  sortname: 'cliente.cnpj_cpf',
-                  sortorder: 'asc'
-                }
-              };
-
-              axios.request(options).then(async function (response) {
-                //console.log(response.data)
-                if (response.data.type === 'error') {
-                  const body = {
-                    text: formatBody(`*Opss!!!!*\nOcorreu um erro! Digite *#* e fale com um *Atendente*!`, contact),
-                  };
-                  await sleep(2000)
-                  await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                } if (response.data.total === 0) {
-                  const body = {
-                    text: formatBody(`Cadastro não localizado! *CPF/CNPJ* incorreto ou inválido. Tenta novamente!`, contact),
-                  };
-                  try {
-                    await sleep(2000)
-                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                  } catch (error) {
-                    //console.log('Não consegui enviar a mensagem!')
-                  }
-                } else {
-
-                  let nome;
-                  let id;
-                  let type;
-
-                  nome = response.data?.registros[0]?.razao
-                  id = response.data?.registros[0]?.id
-                  type = response.data?.type
-
-
-                  const body = {
-                    text: formatBody(`Localizei seu Cadastro! \n*${nome}* só mais um instante por favor!`, contact),
-                  };
-                  await sleep(2000)
-                  await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-                  ///VE SE ESTA BLOQUEADO PARA LIBERAR!
-                  var optionscontrato = {
-                    method: 'POST',
-                    url: `${urlixc}/webservice/v1/cliente_contrato`,
-                    headers: {
-                      ixcsoft: 'listar',
-                      Authorization: `Basic ${ixckeybase64}`
-                    },
-                    data: {
-                      qtype: 'cliente_contrato.id_cliente',
-                      query: id,
-                      oper: '=',
-                      page: '1',
-                      rp: '1',
-                      sortname: 'cliente_contrato.id',
-                      sortorder: 'asc'
-                    }
-                  };
-                  axios.request(optionscontrato).then(async function (response) {
-                    let status_internet;
-                    let id_contrato;
-                    status_internet = response.data?.registros[0]?.status_internet;
-                    id_contrato = response.data?.registros[0]?.id;
-                    if (status_internet !== 'A') {
-                      const bodyPdf = {
-                        text: formatBody(`*${nome}*  a sua conexão esta bloqueada! Vou desbloquear para você.`, contact),
-                      };
-                      await sleep(2000)
-                      await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPdf);
-                      const bodyqrcode = {
-                        text: formatBody(`Estou liberando seu acesso. Por favor aguarde!`, contact),
-                      };
-                      await sleep(2000)
-                      await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyqrcode);
-                      //REALIZANDO O DESBLOQUEIO   
-                      var optionsdesbloqeuio = {
-                        method: 'POST',
-                        url: `${urlixc}/webservice/v1/desbloqueio_confianca`,
-                        headers: {
-                          Authorization: `Basic ${ixckeybase64}`
-                        },
-                        data: { id: id_contrato }
-                      };
-
-                      axios.request(optionsdesbloqeuio).then(async function (response) {
-                        let tipo;
-                        let mensagem;
-                        tipo = response.data?.tipo;
-                        mensagem = response.data?.mensagem;
-                        const body_mensagem = {
-                          text: formatBody(`${mensagem}`, contact),
-                        };
-                        if (tipo === 'sucesso') {
-                          //DESCONECTANDO O CLIENTE PARA VOLTAR O ACESSO
-                          var optionsRadius = {
-                            method: 'GET',
-                            url: `${urlixc}/webservice/v1/radusuarios`,
-                            headers: {
-                              ixcsoft: 'listar',
-                              Authorization: `Basic ${ixckeybase64}`
-                            },
-                            data: {
-                              qtype: 'radusuarios.id_cliente',
-                              query: id,
-                              oper: '=',
-                              page: '1',
-                              rp: '1',
-                              sortname: 'radusuarios.id',
-                              sortorder: 'asc'
-                            }
-                          };
-
-                          axios.request(optionsRadius).then(async function (response) {
-                            let tipo;
-                            tipo = response.data?.type;
-
-                            if (tipo === 'success') {
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_mensagem);
-                              const bodyPdf = {
-                                text: formatBody(`Fiz os procedimentos de liberação! Agora aguarde até 5 minutos e veja se sua conexão irá retornar! .\n\nCaso não tenha voltado, retorne o contato e fale com um atendente!`, contact),
-                              };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPdf);
-                              const bodyfinaliza = {
-                                text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                              };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                              await UpdateTicketService({
-                                ticketData: { status: "closed" },
-                                ticketId: ticket.id,
-                                companyId: ticket.companyId,
-                              });
-                            } else {
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_mensagem);
-                              const bodyPdf = {
-                                text: formatBody(`Vou precisar que você *retire* seu equipamento da tomada.\n\n*OBS: Somente retire da tomada.* \nAguarde 1 minuto e ligue novamente!`, contact),
-                              };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyPdf);
-                              const bodyqrcode = {
-                                text: formatBody(`Veja se seu acesso voltou! Caso não tenha voltado retorne o contato e fale com um atendente!`, contact),
-                              };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyqrcode);
-                              const bodyfinaliza = {
-                                text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                              };
-                              await sleep(2000)
-                              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                              await UpdateTicketService({
-                                ticketData: { status: "closed" },
-                                ticketId: ticket.id,
-                                companyId: ticket.companyId,
-                              });
-                            }
-                          }).catch(function (error) {
-                            console.error(error);
-                          });
-                          //FIM DA DESCONEXÃO 
-
-                        } else {
-                          const bodyerro = {
-                            text: formatBody(`Ops! Ocorreu um erro e nao consegui desbloquear!`, contact),
-                          };
-                          await sleep(2000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyerro);
-                          await sleep(2000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body_mensagem);
-                          const bodyerroatendente = {
-                            text: formatBody(`Digite *#* e fale com um atendente!`, contact),
-                          };
-                          await sleep(2000)
-                          await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyerroatendente);
-                        } /* else {
-                                   const bodyerro = {
-                    text: formatBody(`Ops! Ocorreu um erro e nao consegui desbloquear! Digite *#* e fale com um atendente!`
-                                   await sleep(2000)
-                                   await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,bodyerro);  
-                               } */
-
-                      }).catch(async function (error) {
-                        console.log('LINHA 738: ' + error)
-                        const bodyerro = {
-                          text: formatBody(`Ops! Ocorreu um erro digite *#* e fale com um atendente!`, contact),
-                        };
-                        await sleep(2000)
-                        await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyerro);
-                      });
-                    } else {
-                      const bodysembloqueio = {
-                        text: formatBody(`Sua Conexão não está bloqueada! Caso esteja com dificuldades de navegação, retorne o contato e fale com um atendente!`, contact),
-                      };
-                      await sleep(2000)
-                      await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodysembloqueio);
-                      const bodyfinaliza = {
-                        text: formatBody(`Estamos finalizando esta conversa! Caso precise entre em contato conosco!`, contact),
-                      };
-                      await sleep(2000)
-                      await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyfinaliza);
-                      await UpdateTicketService({
-                        ticketData: { status: "closed" },
-                        ticketId: ticket.id,
-                        companyId: ticket.companyId,
-                      });
-                    }
-
-                    //
-                  }).catch(async function (error) {
-                    console.log('LINHA 746: ' + error)
-                    const bodyerro = {
-                      text: formatBody(`Ops! Ocorreu um erro digite *#* e fale com um atendente!`, contact),
-                    };
-                    await sleep(2000)
-                    await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, bodyerro);
-                  });
-
-                }
-
-              }).catch(async function (error) {
-                const body = {
-                  text: formatBody(`*Opss!!!!*\nOcorreu um erro! Digite *#* e fale com um *Atendente*!`, contact),
-                };
-                await sleep(2000)
-                await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-              });
-            } else {
-              const body = {
-                text: formatBody(`Este CPF/CNPJ não é válido!\n\nPor favor tente novamente!\nOu digite *#* para voltar ao *Menu Anterior*`, contact),
-              };
-              await sleep(2000)
-              await wbot.sendMessage(`${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`, body);
-            }
-          }
-        }
-      }
+    if (unreadMessages === 0 && whatsapp.complationMessage && formatBody(whatsapp.complationMessage, contact).trim().toLowerCase() === lastMessage.body.trim().toLowerCase()) {
+        return;
     }
 
+    const ticket = await FindOrCreateTicketService(contact, wbot.id!, unreadMessages, companyId, groupContact);
 
+
+
+    await provider(ticket, msg, companyId, contact, wbot as WASocket);
 
     // voltar para o menu inicial
+
     if (bodyMessage == "#") {
       await ticket.update({
         queueOptionId: null,
@@ -3344,11 +1513,27 @@ const handleMessage = async (
       return;
     }
 
+
     const ticketTraking = await FindOrCreateATicketTrakingService({
       ticketId: ticket.id,
       companyId,
-      whatsappId: whatsapp?.id,
+      whatsappId: whatsapp?.id
     });
+
+    try {
+      if (!msg.key.fromMe) {
+        /**
+         * Tratamento para avaliação do atendente
+         */
+        if (verifyRating(ticketTraking)) {
+          handleRating(msg, ticket, ticketTraking);
+          return;
+        }
+      }
+    } catch (e) {
+      Sentry.captureException(e);
+      console.log(e);
+    }
 
 
     if (hasMedia) {
@@ -3357,9 +1542,106 @@ const handleMessage = async (
       await verifyMessage(msg, ticket, contact);
     }
 
+    const currentSchedule = await VerifyCurrentSchedule(companyId);
+    const scheduleType = await Setting.findOne({
+      where: {
+        companyId,
+        key: "scheduleType"
+      }
+    });
+
+
+    try {
+      if (!msg.key.fromMe && scheduleType) {
+        /**
+         * Tratamento para envio de mensagem quando a empresa está fora do expediente
+         */
+        if (
+          scheduleType.value === "company" &&
+          !isNil(currentSchedule) &&
+          (!currentSchedule || currentSchedule.inActivity === false)
+        ) {
+          const body = `${whatsapp.outOfHoursMessage}`;
+
+          const debouncedSentMessage = debounce(
+            async () => {
+              await wbot.sendMessage(
+                `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"
+                }`,
+                {
+                  text: body
+                }
+              );
+            },
+            3000,
+            ticket.id
+          );
+          debouncedSentMessage();
+          return;
+        }
+
+
+        if (scheduleType.value === "queue" && ticket.queueId !== null) {
+
+          /**
+           * Tratamento para envio de mensagem quando a fila está fora do expediente
+           */
+          const queue = await Queue.findByPk(ticket.queueId);
+
+          const { schedules }: any = queue;
+          const now = moment();
+          const weekday = now.format("dddd").toLowerCase();
+          let schedule = null;
+
+          if (Array.isArray(schedules) && schedules.length > 0) {
+            schedule = schedules.find(
+              s =>
+                s.weekdayEn === weekday &&
+                s.startTime !== "" &&
+                s.startTime !== null &&
+                s.endTime !== "" &&
+                s.endTime !== null
+            );
+          }
+
+          if (
+            scheduleType.value === "queue" &&
+            queue.outOfHoursMessage !== null &&
+            queue.outOfHoursMessage !== "" &&
+            !isNil(schedule)
+          ) {
+            const startTime = moment(schedule.startTime, "HH:mm");
+            const endTime = moment(schedule.endTime, "HH:mm");
+
+            if (now.isBefore(startTime) || now.isAfter(endTime)) {
+              const body = `${queue.outOfHoursMessage}`;
+              const debouncedSentMessage = debounce(
+                async () => {
+                  await wbot.sendMessage(
+                    `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"
+                    }`,
+                    {
+                      text: body
+                    }
+                  );
+                },
+                3000,
+                ticket.id
+              );
+              debouncedSentMessage();
+              return;
+            }
+          }
+        }
+
+      }
+    } catch (e) {
+      Sentry.captureException(e);
+      console.log(e);
+    }
+
     try {
       if (!msg.key.fromMe) {
-        /*** Tratamento para avaliação do atendente */
         if (ticketTraking !== null && verifyRating(ticketTraking)) {
           handleRating(msg, ticket, ticketTraking);
           return;
@@ -3370,12 +1652,116 @@ const handleMessage = async (
       console.log(e);
     }
 
-    if (!ticket.queue && !isGroup && !msg.key.fromMe && !ticket.userId && whatsapp.queues.length >= 1) {
+    if (
+      !ticket.queue &&
+      !isGroup &&
+      !msg.key.fromMe &&
+      !ticket.userId &&
+      whatsapp.queues.length >= 1
+    ) {
       await verifyQueue(wbot, msg, ticket, ticket.contact);
+
     }
+
     const dontReadTheFirstQuestion = ticket.queue === null;
 
     await ticket.reload();
+
+    try {
+      //Fluxo fora do expediente
+      if (!msg.key.fromMe && scheduleType && ticket.queueId !== null) {
+        /**
+         * Tratamento para envio de mensagem quando a fila está fora do expediente
+         */
+        const queue = await Queue.findByPk(ticket.queueId);
+
+        const { schedules }: any = queue;
+        const now = moment();
+        const weekday = now.format("dddd").toLowerCase();
+        let schedule = null;
+
+        if (Array.isArray(schedules) && schedules.length > 0) {
+          schedule = schedules.find(
+            s =>
+              s.weekdayEn === weekday &&
+              s.startTime !== "" &&
+              s.startTime !== null &&
+              s.endTime !== "" &&
+              s.endTime !== null
+          );
+        }
+
+        if (
+          scheduleType.value === "queue" &&
+          queue.outOfHoursMessage !== null &&
+          queue.outOfHoursMessage !== "" &&
+          !isNil(schedule)
+        ) {
+          const startTime = moment(schedule.startTime, "HH:mm");
+          const endTime = moment(schedule.endTime, "HH:mm");
+
+          if (now.isBefore(startTime) || now.isAfter(endTime)) {
+            const body = queue.outOfHoursMessage;
+            const debouncedSentMessage = debounce(
+              async () => {
+                await wbot.sendMessage(
+                  `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"
+                  }`,
+                  {
+                    text: body
+                  }
+                );
+              },
+              3000,
+              ticket.id
+            );
+            debouncedSentMessage();
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      Sentry.captureException(e);
+      console.log(e);
+    }
+
+
+
+    if (!whatsapp?.queues?.length && !ticket.userId && !isGroup && !msg.key.fromMe) {
+
+      const lastMessage = await Message.findOne({
+        where: {
+          ticketId: ticket.id,
+          fromMe: true
+        },
+        order: [["createdAt", "DESC"]]
+      });
+
+      if (lastMessage && lastMessage.body.includes(whatsapp.greetingMessage)) {
+        return;
+      }
+
+      if (whatsapp.greetingMessage) {
+
+        const debouncedSentMessage = debounce(
+          async () => {
+            await wbot.sendMessage(
+              `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"
+              }`,
+              {
+                text: whatsapp.greetingMessage
+              }
+            );
+          },
+          1000,
+          ticket.id
+        );
+        debouncedSentMessage();
+        return;
+      }
+
+    }
+
 
     if (whatsapp.queues.length == 1 && ticket.queue) {
       if (ticket.chatbot && !msg.key.fromMe) {
@@ -3387,7 +1773,9 @@ const handleMessage = async (
         await handleChartbot(ticket, msg, wbot, dontReadTheFirstQuestion);
       }
     }
+
   } catch (err) {
+    console.log(err)
     Sentry.captureException(err);
     logger.error(`Error handling whatsapp message: Err: ${err}`);
   }
@@ -3467,7 +1855,7 @@ const verifyCampaignMessageAndCloseTicket = async (
   companyId: number
 ) => {
   const io = getIO();
-  const body = getBodyMessage(message);
+  const body = await getBodyMessage(message);
   const isCampaign = /\u200c/.test(body);
   if (message.key.fromMe && isCampaign) {
     const messageRecord = await Message.findOne({
@@ -3518,14 +1906,29 @@ const wbotMessageListener = async (wbot: Session, companyId: number): Promise<vo
       if (!messages) return;
 
       messages.forEach(async (message: proto.IWebMessageInfo) => {
+
+        // if (
+        //   !message.key.fromMe &&
+        //   messageUpsert.type === "notify"
+        // ) {
+        //   (wbot as WASocket)!.readMessages([message.key]);
+        // }
+
         const messageExists = await Message.count({
           where: { id: message.key.id!, companyId }
         });
 
         if (!messageExists) {
-          await handleMessage(message, wbot, companyId);
-          await verifyRecentCampaign(message, companyId);
+
+          const body = await getBodyMessage(message);
+          const isCampaign = /\u200c/.test(body);
+
+          if (!isCampaign) {
+            await handleMessage(message, wbot, companyId);
+          }
+
           await verifyCampaignMessageAndCloseTicket(message, companyId);
+          await verifyRecentCampaign(message, companyId);
         }
       });
     });
@@ -3533,26 +1936,29 @@ const wbotMessageListener = async (wbot: Session, companyId: number): Promise<vo
     wbot.ev.on("messages.update", (messageUpdate: WAMessageUpdate[]) => {
       if (messageUpdate.length === 0) return;
       messageUpdate.forEach(async (message: WAMessageUpdate) => {
-        (wbot as WASocket)!.readMessages([message.key])
 
-        handleMsgAck(message, message.update.status);
+        let ack: any;
+        if (message.update.status === 3 && message?.key?.fromMe) {
+          ack = 2;
+        } else {
+          ack = message.update.status;
+        }
+
+        handleMsgAck(message, ack);
       });
     });
 
-    wbot.ev.on("messages.update", (messageUpdate: WAMessageUpdate[]) => {
-      if (messageUpdate.length === 0) return;
-      messageUpdate.forEach(async (message: WAMessageUpdate) => {
-        handleMsgAck(message, message.update.status);
-      });
-    });
 
-    wbot.ev.on("chats.update", async (chatUpdate: Partial<Chat>[]) => {
-      if (chatUpdate.length === 0) return;
-
-      chatUpdate.forEach(async (chat: Partial<Chat>) => {
-        await CreateOrUpdateBaileysChatService(wbot.id, chat);
+    wbot.ev.on('message-receipt.update', (events: any) => {
+      events.forEach(async (msg: any) => {
+        const ack = msg?.receipt?.receiptTimestamp ? 3 :
+          msg?.receipt?.readTimestamp ? 4 : 0;
+        if (!ack) return;
+        await handleMsgAck(msg, ack);
       });
-    });
+    })
+
+
   } catch (error) {
     Sentry.captureException(error);
     logger.error(`Error handling wbot message listener. Err: ${error}`);

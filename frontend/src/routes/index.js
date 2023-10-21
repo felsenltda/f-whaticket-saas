@@ -31,6 +31,9 @@ import CampaignReport from "../pages/CampaignReport";
 import Annoucements from "../pages/Annoucements";
 import Chat from "../pages/Chat";
 import Subscription from "../pages/Subscription/";
+import ToDoList from "../pages/ToDoList/";
+import Kanban from "../pages/Kanban";
+import TagsKanban from "../pages/TagsKanban/";
 
 
 const Routes = () => {
@@ -70,6 +73,12 @@ const Routes = () => {
                   exact
                   path="/quick-messages"
                   component={QuickMessages}
+                  isPrivate
+                />
+                <Route
+                  exact
+                  path="/todolist"
+                  component={ToDoList}
                   isPrivate
                 />
                 <Route
@@ -146,6 +155,8 @@ const Routes = () => {
                       component={CampaignsConfig}
                       isPrivate
                     />
+		    <Route exact path="/Kanban" component={Kanban} isPrivate />
+                    <Route exact path="/TagsKanban" component={TagsKanban} isPrivate />
                   </>
                 )}
               </LoggedInLayout>
